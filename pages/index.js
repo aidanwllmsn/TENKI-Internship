@@ -47,7 +47,7 @@ export default function Home() {
           if (
             newChatHistory.length > 0 &&
             newChatHistory[newChatHistory.length - 1].role === "assistant" &&
-            index == 0
+            index === 0
           ) {
             // If so, append the new chunk to the existing assistant message content
             newChatHistory[newChatHistory.length - 1].content += chunk;
