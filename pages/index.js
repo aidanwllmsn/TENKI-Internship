@@ -36,6 +36,10 @@ export default function Home() {
       eventSource.onmessage = function (event) {
         // Parse the event data, which is a JSON string
         const parsedData = JSON.parse(event.data);
+        if (parsedData.end_of_stream) {
+          eventSource.close();
+          optimizeKeywords(); // Call optimization once the stream is done
+        } else {
         // Split the response by double newlines to create new message bubbles
         const messageChunks = parsedData.split('\n\n');
         // Check if the last message in the chat history is from the assistant
@@ -56,7 +60,55 @@ export default function Home() {
             newChatHistory.push({ role: "assistant", content: chunk });
           }
          });
-          return newChatHistory;  
+          return newChatHistory;
+        });
+      }
+      };
+      eventSource.onopen = () => console.log("Connection to stream opened");
+      eventSource.onerror = function () {
+        eventSource.close();
+      };
+    }
+  };
+
+  const optimizeKeywords = async () => {
+    // Customize optimization query here
+    const optimizationMessage = "Can you optimize those key words further?";
+    setChatHistory((prev) => [
+      ...prev,
+      //{ role: "user", content: optimizationMessage },
+      { role: "system", content: "Now further optimizing key words..." },
+    ]);
+
+    const response = await fetch("/api/generate?endpoint=chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: optimizationMessage }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      const eventSource = new EventSource("/api/generate?endpoint=stream");
+      eventSource.onmessage = function (event) {
+        // Parse the event data, which is a JSON string
+        const parsedData = JSON.parse(event.data);
+
+        // Check if the last message in the chat history is from the assistant
+        setChatHistory((prevChatHistory) => {
+          const newChatHistory = [...prevChatHistory];
+          if (
+            newChatHistory.length > 0 &&
+            newChatHistory[newChatHistory.length - 1].role === "assistant"
+          ) {
+            // If so, append the new chunk to the existing assistant message content
+            newChatHistory[newChatHistory.length - 1].content += parsedData;
+          } else {
+            // Otherwise, add a new assistant message to the chat history
+            newChatHistory.push({ role: "assistant", content: parsedData });
+          }
+          return newChatHistory;
         });
       };
       eventSource.onerror = function () {
