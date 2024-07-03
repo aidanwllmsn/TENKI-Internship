@@ -47,6 +47,7 @@ export default async function handler(req, res) {
 
           // After the stream ends, get the final chat completion
           const chatCompletion = await stream.finalChatCompletion();
+          res.write("data: {\"end_of_stream\": true}\n\n");
         } catch (error) {
           res.write(
             "event: error\ndata: " +
