@@ -44,7 +44,7 @@
 }
 
 .chatContainer {
-  max-width: 600px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
   padding-top: 20px;
@@ -137,6 +137,10 @@
   margin: 0 2px;
 }
 
+.inputSubmit:hover {
+  background-color: #0c785d;
+}
+
 .inputSubmit {
   flex-grow: 4;
 }
@@ -144,6 +148,10 @@
 .inputButton {
   flex-grow: 1;
   background-color: #f44336;
+}
+
+.inputButton:hover {
+  background-color: #af2f26;
 }
 
 .inputText {
