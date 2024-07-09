@@ -8,7 +8,7 @@ export default function Home() {
 
   // The optimizaton queries
   const options = [
-    'Consider the last answer as option 1, generate an option 2 in this same exact format that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
+    'Consider the last answer as option 1, generate an option 2 in this same exact format (do not add a double newline \n\n after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
     'Generate an option 3 in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
     'From the 3 options you have just provided me, can you give me a score on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score'
   ];
@@ -17,7 +17,7 @@ export default function Home() {
   const sendMessage = async (message) => {
 
     // Append user message to chat history
-    setChatHistory((prev) => [...prev]);
+    setChatHistory((prev) => [...prev],);
 
     // Send the user's message to the server
     const response = await fetch("/api/generate?endpoint=chat", {
@@ -43,24 +43,33 @@ export default function Home() {
           const firstParagraph = accumulatedData.split('\n\n')[0];
           setChatHistory((prevChatHistory) => {
             const newChatHistory = [...prevChatHistory];
-            if (
-              newChatHistory.length > 0 &&
-              newChatHistory[newChatHistory.length - 1].role === "assistant"
-            ) {
-              // If so, append the new chunk to the existing assistant message content
-              newChatHistory[newChatHistory.length - 1].content += firstParagraph;
+            // if (
+            //   newChatHistory.length > 0 &&
+            //   newChatHistory[newChatHistory.length - 1].role === "assistant"
+            // ) {
+            //   // If so, append the new chunk to the existing assistant message content
+            //   newChatHistory[newChatHistory.length - 1].content += firstParagraph;
+            // } else {
+            //   // Otherwise, add a new assistant message to the chat history
+            //   newChatHistory.push({ role: "assistant", content: firstParagraph });
+            // }
+            console.log(counter);
+            if (counter === 2) {
+              counter += 1;
+              newChatHistory.push({ role: "assistant", content: firstParagraph });
+            } else if (counter === 3) {
+              newChatHistory.push({ role: "user", content: firstParagraph });
             } else {
-              // Otherwise, add a new assistant message to the chat history
               newChatHistory.push({ role: "assistant", content: firstParagraph });
             }
+            
             return newChatHistory;
           }); 
-          if (counter < 1){        
+          if (counter < 2){        
             counter += 1;
             sendMessage(options[counter]); // Call optimization once the stream is done
-        } else {
-         counter = -1
-        }}
+          }
+        }
         else{
          accumulatedData += parsedData;
        }
@@ -75,6 +84,7 @@ export default function Home() {
   const clearChat = async () => {
     // Clear the chat history in the client state
     setChatHistory([]);
+    counter = -1
 
     // Reset the chat history on the server
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
@@ -95,18 +105,18 @@ export default function Home() {
       <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
       <div className={styles.chatContainer}>
       {chatHistory.map((msg, index) => (
-          // <div
-          //   key={index}
-          //   className={
-          //     msg.role === "user" ? styles.userMessage : styles.assistantMessage
-          //   }
-          // >
-          //   {msg.content}
-          // </div>
-      <div className={styles.chatBox}>{msg.content}</div>
+          <div
+            key={index}
+            className={
+              msg.role === "user" ? styles.chatBox2 : styles.chatBox
+            }
+          >
+            {msg.content}
+          </div>
+      // <div className={styles.chatBox}>{msg.content}</div>
       ))}
-      <div className={styles.chatBox}>Box 2</div>
-      <div className={styles.chatBox}>Box 3</div>
+      {/* <div className={styles.chatBox}>Box 2</div>
+      <div className={styles.chatBox}>Box 3</div> */}
     </div>
       <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
