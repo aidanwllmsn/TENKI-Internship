@@ -44,16 +44,43 @@
 }
 
 .chatContainer {
-  max-width: 600px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
   padding-top: 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap; /* Allow wrapping to the next line */
   align-items: center;
+  justify-content: space-between;
   padding-bottom: 160px;
   margin-bottom: 20px;
   overflow: auto;
+}
+
+.chatBox {
+  width: 30%; /* Each box will take 30% of the container width */
+  padding: 12px;
+  border: 1px solid #10a37f;
+  border-radius: 4px;
+  margin: 0 10px; /* Add some margin between boxes */
+  background-color: #f1f1f1;
+  min-height: 300px;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.chatBox2 {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #10a37f;
+  border-radius: 4px;
+  margin: 20px 0 0; /* Add some margin above the box */
+  background-color: #f1f1f1;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  text-align: center; /* Center text horizontally */
 }
 
 .userMessage,
@@ -84,7 +111,6 @@
   right: 0;
   padding: 20px;
   background: #fff;
-  border-top: 1px solid #eaeaea;
   display: flex;
   justify-content: center;
   height: auto;
@@ -137,6 +163,10 @@
   margin: 0 2px;
 }
 
+.inputSubmit:hover {
+  background-color: #0c785d;
+}
+
 .inputSubmit {
   flex-grow: 4;
 }
@@ -144,6 +174,10 @@
 .inputButton {
   flex-grow: 1;
   background-color: #f44336;
+}
+
+.inputButton:hover {
+  background-color: #af2f26;
 }
 
 .inputText {

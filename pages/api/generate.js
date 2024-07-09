@@ -38,6 +38,7 @@ export default async function handler(req, res) {
             model: "gpt-4-turbo",
             messages: chatHistory,
             stream: true,
+            temperature: 0.0,
           });
 
           for await (const chunk of stream) {

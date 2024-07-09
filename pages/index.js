@@ -3,22 +3,21 @@ import { useState, useEffect, useRef } from "react";
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState([
-    { role: "system", content: "Type query" },
-  ]);
+  const [chatHistory, setChatHistory] = useState([]);
   const chatContainerRef = useRef(null);
 
-  useEffect(() => {
-    // Scroll to the bottom of the chat container whenever chatHistory changes
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
-    }
-  }, [chatHistory]);
+  // The optimizaton queries
+  const options = [
+    'Consider the last answer as option 1, generate an option 2 in this same exact format (do not add a double newline \n\n after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
+    'Generate an option 3 in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
+    'From the 3 options you have just provided me, can you give me a score on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score'
+  ];
+  let counter = -1;
 
   const sendMessage = async (message) => {
+
     // Append user message to chat history
-    setChatHistory((prev) => [...prev, { role: "user", content: message }]);
+    setChatHistory((prev) => [...prev],);
 
     // Send the user's message to the server
     const response = await fetch("/api/generate?endpoint=chat", {
@@ -33,95 +32,59 @@ export default function Home() {
     if (data.success) {
       // Open a connection to receive streamed responses
       const eventSource = new EventSource("/api/generate?endpoint=stream");
+      let accumulatedData = '';
+
       eventSource.onmessage = function (event) {
         // Parse the event data, which is a JSON string
         const parsedData = JSON.parse(event.data);
+
         if (parsedData.end_of_stream) {
           eventSource.close();
-          optimizeKeywords(); // Call optimization once the stream is done
-        } else {
-        // Split the response by double newlines to create new message bubbles
-        const messageChunks = parsedData.split('\n\n');
-        // Check if the last message in the chat history is from the assistant
-        setChatHistory((prevChatHistory) => {
-
-          const newChatHistory = [...prevChatHistory];
-
-          messageChunks.forEach((chunk, index) => {
-          if (
-            newChatHistory.length > 0 &&
-            newChatHistory[newChatHistory.length - 1].role === "assistant" &&
-            index === 0
-          ) {
-            // If so, append the new chunk to the existing assistant message content
-            newChatHistory[newChatHistory.length - 1].content += chunk;
-          } else {
-            // Otherwise, add a new assistant message to the chat history
-            newChatHistory.push({ role: "assistant", content: chunk });
+          const firstParagraph = accumulatedData.split('\n\n')[0];
+          setChatHistory((prevChatHistory) => {
+            const newChatHistory = [...prevChatHistory];
+            // if (
+            //   newChatHistory.length > 0 &&
+            //   newChatHistory[newChatHistory.length - 1].role === "assistant"
+            // ) {
+            //   // If so, append the new chunk to the existing assistant message content
+            //   newChatHistory[newChatHistory.length - 1].content += firstParagraph;
+            // } else {
+            //   // Otherwise, add a new assistant message to the chat history
+            //   newChatHistory.push({ role: "assistant", content: firstParagraph });
+            // }
+            console.log(counter);
+            if (counter === 2) {
+              counter += 1;
+              newChatHistory.push({ role: "assistant", content: firstParagraph });
+            } else if (counter === 3) {
+              newChatHistory.push({ role: "user", content: firstParagraph });
+            } else {
+              newChatHistory.push({ role: "assistant", content: firstParagraph });
+            }
+            
+            return newChatHistory;
+          }); 
+          if (counter < 2){        
+            counter += 1;
+            sendMessage(options[counter]); // Call optimization once the stream is done
           }
-         });
-          return newChatHistory;
-        });
-      }
+        }
+        else{
+         accumulatedData += parsedData;
+       }
       };
       eventSource.onopen = () => console.log("Connection to stream opened");
       eventSource.onerror = function () {
         eventSource.close();
       };
     }
-  };
-
-  const optimizeKeywords = async () => {
-    // Customize optimization query here
-    const optimizationMessage = "Can you optimize those key words further?";
-    setChatHistory((prev) => [
-      ...prev,
-      //{ role: "user", content: optimizationMessage },
-      { role: "system", content: "Now further optimizing key words..." },
-    ]);
-
-    const response = await fetch("/api/generate?endpoint=chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: optimizationMessage }),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      const eventSource = new EventSource("/api/generate?endpoint=stream");
-      eventSource.onmessage = function (event) {
-        // Parse the event data, which is a JSON string
-        const parsedData = JSON.parse(event.data);
-
-        // Check if the last message in the chat history is from the assistant
-        setChatHistory((prevChatHistory) => {
-          const newChatHistory = [...prevChatHistory];
-          if (
-            newChatHistory.length > 0 &&
-            newChatHistory[newChatHistory.length - 1].role === "assistant"
-          ) {
-            // If so, append the new chunk to the existing assistant message content
-            newChatHistory[newChatHistory.length - 1].content += parsedData;
-          } else {
-            // Otherwise, add a new assistant message to the chat history
-            newChatHistory.push({ role: "assistant", content: parsedData });
-          }
-          return newChatHistory;
-        });
-      };
-      eventSource.onerror = function () {
-        eventSource.close();
-      };
-    }
-  };
+   };
 
   const clearChat = async () => {
     // Clear the chat history in the client state
-    setChatHistory([
-      { role: "system", content: "Type query." },
-    ]);
+    setChatHistory([]);
+    counter = -1
 
     // Reset the chat history on the server
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
@@ -135,35 +98,38 @@ export default function Home() {
   };
 
   return (
-    <div>
+    <div className={styles.body}>
       <Head>
-        <title>TENKI OpenAI Chat</title>
+        <title>TENKI Keyword Optimizer</title>
       </Head>
-      <h1 className={styles.heading1}>TENKI OpenAI Chat</h1>
-      <div className={styles.chatContainer} ref={chatContainerRef}>
-        {chatHistory.map((msg, index) => (
+      <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
+      <div className={styles.chatContainer}>
+      {chatHistory.map((msg, index) => (
           <div
             key={index}
             className={
-              msg.role === "user" ? styles.userMessage : styles.assistantMessage
+              msg.role === "user" ? styles.chatBox2 : styles.chatBox
             }
           >
             {msg.content}
           </div>
-        ))}
-      </div>
+      // <div className={styles.chatBox}>{msg.content}</div>
+      ))}
+      {/* <div className={styles.chatBox}>Box 2</div>
+      <div className={styles.chatBox}>Box 3</div> */}
+    </div>
       <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
           <textarea
             className={styles.textarea}
             name="message"
-            placeholder="Type your message here..."
+            placeholder="Paste the listing here..."
             required
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           ></textarea>
           <div className={styles.buttonGroup}>
-            <input className={styles.inputSubmit} type="submit" value="Send" />
+            <input className={styles.inputSubmit} type="submit" value="Optimize" />
             <button
               className={styles.inputButton}
               type="button"
