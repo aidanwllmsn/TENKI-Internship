@@ -49,12 +49,23 @@
   margin: 0 auto;
   padding-top: 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Changed from column to row */
   align-items: center;
+  justify-content: space-between; /* Add space between the boxes */
   padding-bottom: 160px;
   margin-bottom: 20px;
   overflow: auto;
 }
+
+.chatBox {
+  width: 30%; /* Each box will take 30% of the container width */
+  padding: 12px;
+  border: 1px solid #10a37f;
+  border-radius: 4px;
+  margin: 0 10px; /* Add some margin between boxes */
+  background-color: #f1f1f1;
+}
+
 
 .userMessage,
 .assistantMessage {
@@ -84,7 +95,6 @@
   right: 0;
   padding: 20px;
   background: #fff;
-  border-top: 1px solid #eaeaea;
   display: flex;
   justify-content: center;
   height: auto;

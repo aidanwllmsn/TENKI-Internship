@@ -6,16 +6,6 @@ export default function Home() {
   const [chatHistory, setChatHistory] = useState([]);
   const chatContainerRef = useRef(null);
 
-  useEffect(() => {
-    // Scroll to the bottom of the chat container whenever chatHistory changes
-    if (chatContainerRef.current) {
-      console.log("Scrolling to bottom");
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    } else {
-      console.log("chatContainerRef is not set");
-    }
-  }, [chatHistory]);
-
   // The optimizaton queries
   const options = [
     'Consider the last answer as option 1, generate an option 2 in this same exact format that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
@@ -27,13 +17,7 @@ export default function Home() {
   const sendMessage = async (message) => {
 
     // Append user message to chat history
-    if (counter == -1) {
-      setChatHistory((prev) => [...prev, { role: "user", content: message }, { role: "system", content: "Option " + (counter + 2) },]);
-    } else if (counter == 2) {
-      setChatHistory((prev) => [...prev, { role: "system", content: "Evaluation based on maximizing search visibility on Rakuten: "},]);
-    } else {
-      setChatHistory((prev) => [...prev, { role: "system", content: "Option " + (counter + 2) },]);
-    }
+    setChatHistory((prev) => [...prev]);
 
     // Send the user's message to the server
     const response = await fetch("/api/generate?endpoint=chat", {
@@ -48,41 +32,45 @@ export default function Home() {
     if (data.success) {
       // Open a connection to receive streamed responses
       const eventSource = new EventSource("/api/generate?endpoint=stream");
+      let accumulatedData = '';
+
       eventSource.onmessage = function (event) {
         // Parse the event data, which is a JSON string
         const parsedData = JSON.parse(event.data);
+
         if (parsedData.end_of_stream) {
           eventSource.close();
-          if (counter < 2) {  // Change for number of optimization queries being sent (n - 1)
-          counter+=1;
-          sendMessage(options[counter]); // Call optimization once the stream is done
-          } else {
-            counter = -1; // reset counter once all queries finished
-          }
+          const firstParagraph = accumulatedData.split('\n\n')[0];
+          setChatHistory((prevChatHistory) => {
+            const newChatHistory = [...prevChatHistory];
+            if (
+              newChatHistory.length > 0 &&
+              newChatHistory[newChatHistory.length - 1].role === "assistant"
+            ) {
+              // If so, append the new chunk to the existing assistant message content
+              newChatHistory[newChatHistory.length - 1].content += firstParagraph;
+            } else {
+              // Otherwise, add a new assistant message to the chat history
+              newChatHistory.push({ role: "assistant", content: firstParagraph });
+            }
+            return newChatHistory;
+          }); 
+          if (counter < 1){        
+            counter += 1;
+            sendMessage(options[counter]); // Call optimization once the stream is done
         } else {
-          // Check if the last message in the chat history is from the assistant
-        setChatHistory((prevChatHistory) => {
-          const newChatHistory = [...prevChatHistory];
-          if (
-            newChatHistory.length > 0 &&
-            newChatHistory[newChatHistory.length - 1].role === "assistant"
-          ) {
-            // If so, append the new chunk to the existing assistant message content
-            newChatHistory[newChatHistory.length - 1].content += parsedData;
-          } else {
-            // Otherwise, add a new assistant message to the chat history
-            newChatHistory.push({ role: "assistant", content: parsedData });
-          }
-          return newChatHistory;
-        });
-        }
+         counter = -1
+        }}
+        else{
+         accumulatedData += parsedData;
+       }
       };
       eventSource.onopen = () => console.log("Connection to stream opened");
       eventSource.onerror = function () {
         eventSource.close();
       };
     }
-  };
+   };
 
   const clearChat = async () => {
     // Clear the chat history in the client state
@@ -105,18 +93,21 @@ export default function Home() {
         <title>TENKI Keyword Optimizer</title>
       </Head>
       <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-      <div className={styles.chatContainer} ref={chatContainerRef}>
-        {chatHistory.map((msg, index) => (
-          <div
-            key={index}
-            className={
-              msg.role === "user" ? styles.userMessage : styles.assistantMessage
-            }
-          >
-            {msg.content}
-          </div>
-        ))}
-      </div>
+      <div className={styles.chatContainer}>
+      {chatHistory.map((msg, index) => (
+          // <div
+          //   key={index}
+          //   className={
+          //     msg.role === "user" ? styles.userMessage : styles.assistantMessage
+          //   }
+          // >
+          //   {msg.content}
+          // </div>
+      <div className={styles.chatBox}>{msg.content}</div>
+      ))}
+      <div className={styles.chatBox}>Box 2</div>
+      <div className={styles.chatBox}>Box 3</div>
+    </div>
       <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
           <textarea
