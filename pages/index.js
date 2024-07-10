@@ -4,9 +4,26 @@ import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const chatContainerRef = useRef(null);
+  const [userMessage, setUserMessage] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('Analyzing');
 
-  // The optimizaton queries
+  useEffect(() => { // Analyzing dot animation
+    if (isLoading) {
+      const loadingInterval = setInterval(() => {
+        setLoadingText(prev => {
+          if (prev === 'Analyzing') return 'Analyzing.';
+          if (prev === 'Analyzing.') return 'Analyzing..';
+          if (prev === 'Analyzing..') return 'Analyzing...';
+          return 'Analyzing';
+        });
+      }, 250); // Change dots every 250ms
+
+      return () => clearInterval(loadingInterval); // Cleanup interval on unmount
+    }
+  }, [isLoading]);
+
+  // The optimizaton queries. Change as needed
   const queries = [
     'Consider the last answer as option 1, generate an option 2 in this same exact format (do not add a double newline \n\n after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
     'Generate an option 3 in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
@@ -48,6 +65,7 @@ export default function Home() {
               counter += 1;
               newChatHistory.push({ role: "options", content: firstParagraph });
             } else if (counter === 3) {
+              setIsLoading(false);
               newChatHistory.push({ role: "score", content: firstParagraph });
             } else {
               newChatHistory.push({ role: "options", content: firstParagraph });
@@ -57,7 +75,7 @@ export default function Home() {
           }); 
           if (counter < 2){        
             counter += 1;
-            sendMessage(queries[counter]); // Call optimization once the stream is done
+            sendMessage(queries[counter]); // Call queries once the stream is done
           }
         }
         else{
@@ -80,10 +98,17 @@ export default function Home() {
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
   };
 
+  const regenerate = async () => {
+    setIsLoading(true);
+    sendMessage(userMessage);
+  };
+
   const onSubmit = (event) => {
     event.preventDefault();
     if (!message.trim()) return;
     counter = -1
+    setIsLoading(true);
+    setUserMessage(message.trim());
     sendMessage(message.trim());
     setMessage("");
   };
@@ -94,8 +119,11 @@ export default function Home() {
         <title>TENKI Keyword Optimizer</title>
       </Head>
       <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
+      {!isLoading && chatHistory.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
+      {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
+      {isLoading && <p className={styles.loadingTextsmall}>This may take a while</p>}
       <div className={styles.chatContainer}>
-      {chatHistory.map((msg, index) => (
+      {!isLoading && chatHistory.map((msg, index) => (
           <div
             key={index}
             className={
@@ -118,6 +146,13 @@ export default function Home() {
           ></textarea>
           <div className={styles.buttonGroup}>
             <input className={styles.inputSubmit} type="submit" value="Optimize" />
+            <button
+              className={styles.inputGen}
+              type="button"
+              onClick={regenerate}
+            >
+              Regenerate
+            </button>
             <button
               className={styles.inputButton}
               type="button"
