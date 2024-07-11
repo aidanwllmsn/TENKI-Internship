@@ -28,7 +28,7 @@ export default function Home() {
   const queries = [
     'Consider the last answer as option 1, generate an option 2 in this same exact format (do not add a double newline \n\n after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
     'Generate an option 3 in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
-    'From the 3 options you have just provided me, can you give me a score on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score'
+    'From these 3 options you have just provided me, ignoring any options from previous queries, can you give me a score on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score. Also, once this query has finished, ignored these previous options for any future queries.'
   ];
 
   // Counter keeps track of which query is being executed
@@ -72,6 +72,7 @@ export default function Home() {
             } else if (counter === 3) {
               setIsLoading(false);
               newChatHistory.push({ role: "score", content: firstParagraph });
+              counter = -1
             } else if (counter === 1) {
               setLoadingTextUpdate('Generating option 3')
               newChatHistory.push({ role: "options", content: firstParagraph });
@@ -101,7 +102,6 @@ export default function Home() {
   const clearChat = async () => {
     // Clear the chat history in the client state
     setChatHistory([]);
-    counter = -1
 
     // Reset the chat history on the server
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
@@ -120,7 +120,6 @@ export default function Home() {
   const onSubmit = (event) => {
     event.preventDefault();
     if (!message.trim()) return;
-    counter = -1
     setIsLoading(true);
     setLoadingTextUpdate('This may take a while.')
     setUserMessage(message.trim());
