@@ -203,15 +203,19 @@
   color: #8e8ea0;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 20%;
+  margin-top: 10px;
   margin-bottom: 0;
   width: 100%;
 }
 
 .loadingTextsmall {
   font-size: 16px;
+  text-align: center;
   color: #8e8ea0;
   margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .placeholder {

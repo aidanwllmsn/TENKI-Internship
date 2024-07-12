@@ -27,7 +27,7 @@ export default function Home() {
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Generate a second response in this same exact format (do not add a double newline after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}"', 
+    'Generate a second response in this same exact format (do not add a double newline after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}\n\n"', 
     'Generate a third response in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
     "Can you provide a score of each of these three responses base on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score. Also, once this query has finished, ignore these previous options",
     "Thank you. Now I will give you a new query of the similar format. Disregard the previous queries and give me a new optimization of this next listing."
@@ -150,10 +150,8 @@ export default function Home() {
       </Head>
       <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
       {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
-      {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
-      {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
       <div className={styles.chatContainer}>
-      {!isLoading && allChat.map((msg, index) => (
+      {allChat.map((msg, index) => (
           <div
             key={index}
             className={
@@ -163,7 +161,9 @@ export default function Home() {
             {msg.content}
           </div>
       ))}
-    </div>
+        {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
+        {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
+      </div>
       <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
           <textarea
