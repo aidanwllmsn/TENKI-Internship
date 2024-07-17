@@ -123,6 +123,45 @@
   margin: 0 auto; /* Applies automatic horizontal margins */
 }
 
+.container {
+ width: 80%;
+ margin: 0 auto;
+}
+
+.main {
+ padding: 20px;
+}
+
+.title {
+ text-align: center;
+}
+
+.tableContainer {
+ margin-top: 20px;
+ text-align: center; /* Center align the table container */
+}
+
+.table {
+ width: 80%; /* Adjust table width as needed */
+ margin: 0 auto; /* Center align the table */
+ border-collapse: collapse;
+}
+
+.table th, .table td {
+ border: 1px solid #ddd;
+ padding: 8px;
+ text-align: center; /* Center align table cell contents */
+}
+
+.table th {
+ background-color: #f2f2f2;
+}
+
+.table tr:nth-child(even) {
+ background-color: #f2f2f2;
+}
+
+
 .form {
   max-width: 600px;
   width: 100%;
