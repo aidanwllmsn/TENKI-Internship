@@ -43,6 +43,31 @@
   margin: 16px 0 40px;
 }
 
+.header {
+  position: relative;
+  text-align: center;
+  padding: 10px;
+}
+
+.dataButton { 
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #e0e0e1;
+  color: black;
+  border: none;
+  border-radius: 5px;  
+  text-decoration: none;
+  font-family: "ColfaxAI", Helvetica, sans-serif;
+}
+
+.dataButton:hover {
+  background-color: #afafb1;
+}
+
 .chatContainer {
   max-width: 1000px;
   width: 100%;
@@ -59,7 +84,10 @@
 }
 
 .chatBox {
-  width: 30%; /* Each box will take 30% of the container width */
+  display: flex;
+  align-items: flex-start; /* Aligns the text at the top */
+  justify-content: center; /* Centers the text horizontally */
+  width: 30%; /* Adjust the width as needed */
   padding: 12px;
   border: 1px solid #10a37f;
   border-radius: 4px;
@@ -67,6 +95,11 @@
   background-color: #f1f1f1;
   min-height: 300px;
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  cursor: pointer;
+}
+
+.chatBox:hover {
+  background-color: #d7d6d6;
 }
 
 .chatBox2 {
@@ -74,7 +107,7 @@
   padding: 12px;
   border: 1px solid #10a37f;
   border-radius: 4px;
-  margin: 20px 0 20px; /* Add some margin above the box */
+  margin: 20px 10px 20px; /* Add some margin above the box */
   background-color: #f1f1f1;
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
   display: flex;
@@ -142,7 +175,7 @@
 }
 
 .table {
- width: 80%; /* Adjust table width as needed */
+ width: 100%; /* Adjust table width as needed */
  margin: 0 auto; /* Center align the table */
  border-collapse: collapse;
 }
@@ -157,9 +190,13 @@
  background-color: #f2f2f2;
 }
 
-.table tr:nth-child(even) {
- background-color: #f2f2f2;
+.table .KeywordsColumn{
+  width: 80%;
 }
+
+/* .table tr:nth-child(even) {
+ background-color: #f2f2f2;
+} */
 
 
 .form {
@@ -242,15 +279,19 @@
   color: #8e8ea0;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 20%;
+  margin-top: 10px;
   margin-bottom: 0;
   width: 100%;
 }
 
 .loadingTextsmall {
   font-size: 16px;
+  text-align: center;
   color: #8e8ea0;
   margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
 .placeholder {

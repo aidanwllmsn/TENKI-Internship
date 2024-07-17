@@ -1,11 +1,14 @@
 import Head from "next/head";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/router';
+import { usePageContext } from '../context/PageContext';
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [allChat, setAllChat] = useState([]);
+  const { setPageState, pageState } = usePageContext();
+  const [allChat, setAllChat] = useState(pageState || []);
+  const [items, setItems] = useState([]);
   const [userMessage, setUserMessage] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Analyzing');
@@ -30,7 +33,7 @@ export default function Home() {
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Generate a second response in this same exact format (do not add a double newline after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}"', 
+    'Generate a second response in this same exact format (do not add a double newline after the title of each category) that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}\n\n"', 
     'Generate a third response in this same exact format as the previous 2 that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.',
     "Can you provide a score of each of these three responses base on each option on how well they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score. Also, once this query has finished, ignore these previous options",
     "Thank you. Now I will give you a new query of the similar format. Disregard the previous queries and give me a new optimization of this next listing."
@@ -99,7 +102,6 @@ export default function Home() {
           // Call queries, then clear chat history
           if (counter < 4){        
             counter += 1;
-            console.log("Sending query index " + counter);
             sendMessage(queries[counter - 1]); // Call queries once the stream is done
           } else if (counter > 4) {
             setChatHistory([]);
@@ -126,9 +128,40 @@ export default function Home() {
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
   };
 
-  // Regenerate last submitted message
+   // Regenerate last submitted message
+   const regenerate = async () => {
+    if (userMessage.length != 0) {
+      setIsLoading(true);
+      setLoadingTextUpdate('This may take a while.')
+      sendMessage(userMessage);
+    } 
+  };
+
   const showTable = async () => {
-   router.push('/items');
+    setPageState(allChat);
+    router.push('/items');
+  };
+
+  const addItem = async (msg) => {
+    try {
+      const response = await fetch('/api/addItem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: msg }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setItems([...items, result.data]);
+        alert('Keywords saved.');
+      } else {
+        alert('Failed to add item.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to add item.');
+    }
   };
 
   // Events when submit is clicked
@@ -147,22 +180,27 @@ export default function Home() {
       <Head>
         <title>TENKI Keyword Optimizer</title>
       </Head>
-      <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-      {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
-      {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
-      {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
+      <div className="header">
+        <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
+        {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
+        <button
+              className={styles.dataButton}
+              type="button"
+              onClick={showTable}
+            >
+              Saved Keywords
+          </button>
+        </div>
       <div className={styles.chatContainer}>
-      {!isLoading && allChat.map((msg, index) => (
-          <div
-            key={index}
-            className={
-              msg.role === "score" ? styles.chatBox2 : styles.chatBox
-            }
-          >
+      {allChat.map((msg, index) => (
+          <button onClick={() => addItem(msg.content)} key={index}
+            className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}>
             {msg.content}
-          </div>
+          </button>
       ))}
-    </div>
+        {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
+        {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
+      </div>
       <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
           <textarea
@@ -178,9 +216,9 @@ export default function Home() {
             <button
               className={styles.inputGen}
               type="button"
-              onClick={showTable}
+              onClick={regenerate}
             >
-              Database
+              Regenerate
             </button>
             <button
               className={styles.inputButton}
