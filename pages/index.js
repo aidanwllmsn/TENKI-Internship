@@ -1,5 +1,6 @@
 import Head from "next/head";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from 'next/router';
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
@@ -9,6 +10,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Analyzing');
   const [loadingTextUpdate, setLoadingTextUpdate] = useState('This may take a while.')
+
+  const router = useRouter(); // Get router object
 
   useEffect(() => { // Analyzing dot animation
     if (isLoading) {
@@ -124,12 +127,8 @@ export default function Home() {
   };
 
   // Regenerate last submitted message
-  const regenerate = async () => {
-    if (userMessage.length != 0) {
-      setIsLoading(true);
-      setLoadingTextUpdate('This may take a while.')
-      sendMessage(userMessage);
-    } 
+  const showTable = async () => {
+   router.push('/items');
   };
 
   // Events when submit is clicked
@@ -179,9 +178,9 @@ export default function Home() {
             <button
               className={styles.inputGen}
               type="button"
-              onClick={regenerate}
+              onClick={showTable}
             >
-              Regenerate
+              Database
             </button>
             <button
               className={styles.inputButton}
