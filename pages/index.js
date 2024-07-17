@@ -1,11 +1,14 @@
 import Head from "next/head";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from 'next/router';
+import { usePageContext } from '../context/PageContext';
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [allChat, setAllChat] = useState([]);
+  const { setPageState, pageState } = usePageContext();
+  const [allChat, setAllChat] = useState(pageState || []);
+  const [items, setItems] = useState([]);
   const [userMessage, setUserMessage] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Analyzing');
@@ -99,7 +102,6 @@ export default function Home() {
           // Call queries, then clear chat history
           if (counter < 4){        
             counter += 1;
-            console.log("Sending query index " + counter);
             sendMessage(queries[counter - 1]); // Call queries once the stream is done
           } else if (counter > 4) {
             setChatHistory([]);
@@ -126,9 +128,40 @@ export default function Home() {
     await fetch("/api/generate?endpoint=reset", { method: "POST" });
   };
 
-  // Regenerate last submitted message
+   // Regenerate last submitted message
+   const regenerate = async () => {
+    if (userMessage.length != 0) {
+      setIsLoading(true);
+      setLoadingTextUpdate('This may take a while.')
+      sendMessage(userMessage);
+    } 
+  };
+
   const showTable = async () => {
-   router.push('/items');
+    setPageState(allChat);
+    router.push('/items');
+  };
+
+  const addItem = async (msg) => {
+    try {
+      const response = await fetch('/api/addItem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: msg }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setItems([...items, result.data]);
+        alert('Keywords saved.');
+      } else {
+        alert('Failed to add item.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to add item.');
+    }
   };
 
   // Events when submit is clicked
@@ -147,18 +180,23 @@ export default function Home() {
       <Head>
         <title>TENKI Keyword Optimizer</title>
       </Head>
-      <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-      {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
+      <div className="header">
+        <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
+        {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
+        <button
+              className={styles.dataButton}
+              type="button"
+              onClick={showTable}
+            >
+              Saved Keywords
+          </button>
+        </div>
       <div className={styles.chatContainer}>
       {allChat.map((msg, index) => (
-          <div
-            key={index}
-            className={
-              msg.role === "score" ? styles.chatBox2 : styles.chatBox
-            }
-          >
+          <button onClick={() => addItem(msg.content)} key={index}
+            className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}>
             {msg.content}
-          </div>
+          </button>
       ))}
         {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
         {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
@@ -178,9 +216,9 @@ export default function Home() {
             <button
               className={styles.inputGen}
               type="button"
-              onClick={showTable}
+              onClick={regenerate}
             >
-              Database
+              Regenerate
             </button>
             <button
               className={styles.inputButton}
