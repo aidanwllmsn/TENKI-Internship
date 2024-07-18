@@ -1,29 +1,10 @@
-# OpenAI API Quickstart - Node.js example app
+# TENKI-JAPAN Keyword Optimizer Quickstart
 
-This is an example chat app intended to get you started with your first OpenAI API project. It uses the [Chat Completions API](https://platform.openai.com/docs/api-reference/chat) to create a simple general purpose chat app with streaming.
+This node.js app takes in a listing from Rakuten and provides options for more optimized keywords to maximie search visibility. It uses the [Chat Completions API](https://platform.openai.com/docs/api-reference/chat) to create a simple chat app with streaming.
 
 ## Basic request
 
 To send your first API request with the [OpenAI Node SDK](https://github.com/openai/openai-node), make sure you have the right [dependencies installed](https://platform.openai.com/docs/quickstart?context=node) and then run the following code:
-
-```python
-import OpenAI from "openai";
-
-const openai = new OpenAI();
-
-async function main() {
-  const completion = await openai.chat.completions.create({
-    messages: [{ role: "system", content: "You are a helpful assistant." }],
-    model: "gpt-3.5-turbo",
-  });
-
-  console.log(completion.choices[0]);
-}
-
-main();
-```
-
-This quickstart app builds on top of the example code above, with streaming and a UI to visualize messages.
 
 ## Setup
 
@@ -34,7 +15,7 @@ This quickstart app builds on top of the example code above, with streaming and 
 3. Navigate into the project directory
 
    ```bash
-   $ cd openai-quickstart-node
+   $ cd TENKI-Internship
    ```
 
 4. Install the requirements
@@ -55,10 +36,23 @@ This quickstart app builds on top of the example code above, with streaming and 
    ```
 6. Add your [API key](https://platform.openai.com/account/api-keys) to the newly created `.env` file
 
-7. Run the app
+7. Set up a MongoDB database using MongoDB Atlas.
+
+8. Sign Up: Sign up for a MongoDB Atlas account at MongoDB Atlas.
+
+9. Create a Cluster: Follow the instructions to create a new cluster.
+
+10. Configure Network Access: Allow access to your cluster from your IP address or set it to allow access from anywhere.
+
+11. Create a Database User: Set up a database user with a username and password.
+
+12. Get Connection String: Retrieve your MongoDB connection string. It will look something like this: mongodb+srv://<username>:<password>@cluster0.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+Add it to the .env file.
+
+13. Run the app
 
    ```bash
    $ npm run dev
    ```
 
-You should now be able to access the app at [http://localhost:3000](http://localhost:3000)! For the full context behind this example app, check out the [tutorial](https://platform.openai.com/docs/quickstart).
+You should now be able to access the app at [http://localhost:3000](http://localhost:3000)!
