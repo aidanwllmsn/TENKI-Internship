@@ -46,7 +46,12 @@ To send your first API request with the [OpenAI Node SDK](https://github.com/ope
 
 11. Create a Database User: Set up a database user with a username and password.
 
-12. Get Connection String: Retrieve your MongoDB connection string. It will look something like this: mongodb+srv://<username>:<password>@cluster0.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+12. Get Connection String: Retrieve your MongoDB connection string. It will look something like this:
+    
+    ```bash
+    mongodb+srv://<username>:<password>@cluster0.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+    ```
+    
 Add it to the .env file.
 
 13. Run the app
