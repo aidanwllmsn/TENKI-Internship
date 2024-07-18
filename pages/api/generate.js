@@ -35,10 +35,11 @@ export default async function handler(req, res) {
 
         try {
           const stream = await openai.beta.chat.completions.stream({
-            model: "gpt-4-turbo",
+            model: "gpt-3.5-turbo",
             messages: chatHistory,
             stream: true,
             temperature: 0.0,
+            max_tokens: 200
           });
 
           for await (const chunk of stream) {

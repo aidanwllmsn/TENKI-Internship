@@ -87,6 +87,7 @@
   display: flex;
   align-items: flex-start; /* Aligns the text at the top */
   justify-content: center; /* Centers the text horizontally */
+  text-align: left;
   width: 30%; /* Adjust the width as needed */
   padding: 12px;
   border: 1px solid #10a37f;
@@ -114,6 +115,30 @@
   justify-content: center; /* Center horizontally */
   align-items: center; /* Center vertically */
   text-align: center; /* Center text horizontally */
+}
+
+
+.successMessage {
+  position: fixed;
+  top: -50px;
+  right: auto;
+  left: auto;
+  background-color: #10a37f;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 20px;
+  border-radius: 3px;
+  transition: top 0.5s ease-in-out;
+  z-index: 1000;
+}
+
+.show {
+  top: 15px; /* Slide down to the top of the screen */
+}
+
+.hide {
+  top: -50px; /* Slide back up off the screen */
 }
 
 .userMessage,
@@ -189,14 +214,6 @@
 .table th {
  background-color: #f2f2f2;
 }
-
-.table .KeywordsColumn{
-  width: 80%;
-}
-
-/* .table tr:nth-child(even) {
- background-color: #f2f2f2;
-} */
 
 
 .form {
