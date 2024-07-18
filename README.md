@@ -2,10 +2,6 @@
 
 This node.js app takes in a listing from Rakuten and provides options for more optimized keywords to maximie search visibility. It uses the [Chat Completions API](https://platform.openai.com/docs/api-reference/chat) to create a simple chat app with streaming.
 
-## Basic request
-
-To send your first API request with the [OpenAI Node SDK](https://github.com/openai/openai-node), make sure you have the right [dependencies installed](https://platform.openai.com/docs/quickstart?context=node) and then run the following code:
-
 ## Setup
 
 1. If you don’t have Node.js installed, install it from [nodejs.org](https://nodejs.org/en/) (Node.js version >= 16.0.0 required)
