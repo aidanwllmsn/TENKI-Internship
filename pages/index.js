@@ -11,12 +11,12 @@ export default function Home() {
   const [userMessage, setUserMessage] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Analyzing');
-  const [loadingTextUpdate, setLoadingTextUpdate] = useState('This may take a while.')
+  const [loadingTextUpdate, setLoadingTextUpdate] = useState('Generating option 1')
   const [showMessage, setShowMessage] = useState(false);
 
   const router = useRouter(); // Get router object
 
-  useEffect(() => {
+  useEffect(() => { // Sucessfully saved message
     if (showMessage) {
       const timer = setTimeout(() => {
         setShowMessage(false);
@@ -42,13 +42,14 @@ export default function Home() {
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}\n\n"', 
-    'Generate a third response that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices. Format it like so: "関連キーワード: {new key words}\n\n"',
-    "Can you provide a score of each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Can you format it like so: Option 1: score, Option 2: score, Option 3: score.",
+    'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"', 
+    'Generate a third response that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"',
+    "Can you provide a score for each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it like so: Option 1: score, Option 2: score, Option 3: score",
   ]
   // Counter keeps track of which query is being executed
   let counter = 0;
 
+  // Send query message to GPT
   const sendMessage = async (message) => { 
 
     // Append user message to chat history
@@ -134,17 +135,19 @@ export default function Home() {
    const regenerate = async () => {
     if (userMessage.length != 0 && !isLoading) {
       setIsLoading(true);
-      setLoadingTextUpdate('This may take a while.')
+      setLoadingTextUpdate('Generating option 1')
       sendMessage(userMessage);
     } 
   };
 
+  // Go to the saved keywords page
   const showTable = async () => {
     if (isLoading) return;
     setPageState(allChat);
     router.push('/items');
   };
 
+  // Find the option blocks for filtering
   const findBlockIndices = (index) => {
     const role = allChat[index].role;
     let start = index;
@@ -164,6 +167,7 @@ export default function Home() {
     return { start, end };
     };
 
+  // Add selected keywords to the databse
   const addItem = async (content, index) => {
     if (allChat[index].role === 'score' || isLoading) return;
     try {
@@ -195,7 +199,7 @@ export default function Home() {
     event.preventDefault();
     if (!message.trim() || isLoading) return;
     setIsLoading(true);
-    setLoadingTextUpdate('This may take a while.')
+    setLoadingTextUpdate('Generating option 1')
     setUserMessage(message.trim());
     sendMessage(message.trim());
     setMessage("");
