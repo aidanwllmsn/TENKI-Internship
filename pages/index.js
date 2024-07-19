@@ -2,19 +2,31 @@ import Head from "next/head";
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 import { usePageContext } from '../context/PageContext';
+import { useWaitForLoading } from './useWaitForLoading';
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
-  const { setPageState, pageState } = usePageContext();
+  const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
   const [items, setItems] = useState([]);
   const [userMessage, setUserMessage] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Analyzing');
   const [loadingTextUpdate, setLoadingTextUpdate] = useState('Generating option 1')
   const [showMessage, setShowMessage] = useState(false);
 
   const router = useRouter(); // Get router object
+
+  const [strings, setStrings] = useState([]);
+  const waitForLoading = useWaitForLoading(isLoading);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('/api/strings');
+      const data = await response.json();
+      setStrings(data);
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => { // Sucessfully saved message
     if (showMessage) {
@@ -51,7 +63,6 @@ export default function Home() {
 
   // Send query message to GPT
   const sendMessage = async (message) => { 
-
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
 
@@ -96,8 +107,8 @@ export default function Home() {
               newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 4) {
               newAllChat.push({ role: "score", content: firstParagraph }); 
-              setIsLoading(false);
               counter = 0;
+              setIsLoading(false);
             } else {
               setLoadingTextUpdate('Generating option 2')
               newAllChat.push({ role: "options", content: firstParagraph });
@@ -120,25 +131,6 @@ export default function Home() {
       };
     }
    };
-
-  const clearChat = async () => {
-    if (isLoading) return;
-    // Clear the chat history in the client state
-    setAllChat([]);
-    setUserMessage([]);
-
-    // Reset the chat history on the server
-    await fetch("/api/generate?endpoint=reset", { method: "POST" });
-  };
-
-   // Regenerate last submitted message
-   const regenerate = async () => {
-    if (userMessage.length != 0 && !isLoading) {
-      setIsLoading(true);
-      setLoadingTextUpdate('Generating option 1')
-      sendMessage(userMessage);
-    } 
-  };
 
   // Go to the saved keywords page
   const showTable = async () => {
@@ -194,16 +186,24 @@ export default function Home() {
     }
   };
 
-  // Events when submit is clicked
-  const onSubmit = (event) => {
-    event.preventDefault();
-    if (!message.trim() || isLoading) return;
-    setIsLoading(true);
-    setLoadingTextUpdate('Generating option 1')
-    setUserMessage(message.trim());
-    sendMessage(message.trim());
-    setMessage("");
+  // Function to process strings sequentially
+  const processStringsSequentially = async (strings) => {
+    for (const str of strings) {
+      setIsLoading(true);
+      await sendMessage(str.trim());
+      // Wait for isLoading to become false before continuing
+      await waitForLoading();
+    }
+    setIsProcessed(true);
+    console.log(isProcessed);
   };
+
+  useEffect(() => {
+    console.log(isProcessed);
+    if (!isProcessed && strings.length > 0) {
+      processStringsSequentially(strings);
+    }
+  }, [isProcessed, strings]);
 
   return (
     <div className={styles.body}>
@@ -231,7 +231,7 @@ export default function Home() {
         {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
         {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
       </div>
-      <div className={styles.messageInputContainer}>
+      {/* <div className={styles.messageInputContainer}>
         <form onSubmit={onSubmit}>
           <textarea
             className={styles.textarea}
@@ -259,7 +259,7 @@ export default function Home() {
             </button>
           </div>
         </form>
-      </div>
+      </div> */}
       <div className={`${styles.successMessage} ${showMessage ? styles.show : styles.hide}`}>
         Successfully Saved
       </div>
