@@ -1,11 +1,10 @@
 import Head from "next/head";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 import { usePageContext } from '../context/PageContext';
 import styles from "./index.module.css";
 export default function Home() {
   const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
   const { setPageState, pageState } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
   const [items, setItems] = useState([]);
@@ -43,25 +42,21 @@ export default function Home() {
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Generate a second response in this same exact format that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing', 
-    'Condense and refine these into more concise keywords.',
-    "Can you provide a score of each of these three responses out of 10 based on how well you think they would perform on Rakuten based off maximizing search visibility. Can you format as simplistic as possible with minimal explanation like so: Option 1: score Option 2: score Option 3: score",
-    "Now I will give you a new query of the similar format. Disregard the previous queries and give me a new optimization of this next listing."
-  ];
-
+    'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {new key words}\n\n"', 
+    'Generate a third response that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices. Format it like so: "関連キーワード: {new key words}\n\n"',
+    "Can you provide a score of each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Can you format it like so: Option 1: score, Option 2: score, Option 3: score.",
+  ]
   // Counter keeps track of which query is being executed
   let counter = 0;
 
   const sendMessage = async (message) => { 
 
     // Append user message to chat history
-    setChatHistory((prev) => [...prev]);
+    setAllChat((prev) => [...prev]);
 
     if (counter == 0) {
-      message = 'Provide the answer in this format"関連キーワード: {new key words}\n\n"' + message;
+      message = 'Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}\n\n" ' + message;
     }
-
-    console.log(message);
 
     // Send the user's message to the server
     const response = await fetch("/api/generate?endpoint=chat", {
@@ -86,44 +81,35 @@ export default function Home() {
         if (parsedData.end_of_stream) {
           eventSource.close();
           const firstParagraph = accumulatedData.split('\n\n')[0];
-          setChatHistory((prevChatHistory) => {
-            const newChatHistory = [...prevChatHistory];
+          setAllChat((prevAllChat) => {
+            const newAllChat = [...prevAllChat];
             
             // Detect which query is being ran and perform actions
             if (counter === 2) {
               setLoadingTextUpdate('Generating option 3')
-              newChatHistory.push({ role: "options", content: firstParagraph });
+              newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.")
-
-              newChatHistory.push({ role: "options", content: firstParagraph });
-            } else if (counter === 4) {
-              newChatHistory.push({ role: "score", content: firstParagraph });
               counter += 1;
-            } else if (counter === 5) {
+
+              newAllChat.push({ role: "options", content: firstParagraph });
+            } else if (counter === 4) {
+              newAllChat.push({ role: "score", content: firstParagraph }); 
               setIsLoading(false);
-              setAllChat((prevAllChat) => [
-                ...prevAllChat,
-                ...newChatHistory,
-              ]);
-              counter = 0
-              return;
+              counter = 0;
             } else {
               setLoadingTextUpdate('Generating option 2')
-              newChatHistory.push({ role: "options", content: firstParagraph });
+              newAllChat.push({ role: "options", content: firstParagraph });
             }
-            return newChatHistory;
+            return newAllChat;
           }); 
 
           // Call queries, then clear chat history
-          if (counter < 4){        
+          if (counter < 3){      
             counter += 1;
             sendMessage(queries[counter - 1]); // Call queries once the stream is done
-          } else if (counter > 4) {
-            setChatHistory([]);
-          }
-        }
-        else{
+          } 
+        } else {
          accumulatedData += parsedData;
        }
       };
@@ -135,8 +121,8 @@ export default function Home() {
    };
 
   const clearChat = async () => {
+    if (isLoading) return;
     // Clear the chat history in the client state
-    setChatHistory([]);
     setAllChat([]);
     setUserMessage([]);
 
@@ -146,7 +132,7 @@ export default function Home() {
 
    // Regenerate last submitted message
    const regenerate = async () => {
-    if (userMessage.length != 0) {
+    if (userMessage.length != 0 && !isLoading) {
       setIsLoading(true);
       setLoadingTextUpdate('This may take a while.')
       sendMessage(userMessage);
@@ -154,6 +140,7 @@ export default function Home() {
   };
 
   const showTable = async () => {
+    if (isLoading) return;
     setPageState(allChat);
     router.push('/items');
   };
@@ -178,9 +165,7 @@ export default function Home() {
     };
 
   const addItem = async (content, index) => {
-    if (allChat[index].role === 'score') {
-      return;
-    }
+    if (allChat[index].role === 'score' || isLoading) return;
     try {
       const response = await fetch('/api/addItem', {
         method: 'POST',
@@ -208,7 +193,7 @@ export default function Home() {
   // Events when submit is clicked
   const onSubmit = (event) => {
     event.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || isLoading) return;
     setIsLoading(true);
     setLoadingTextUpdate('This may take a while.')
     setUserMessage(message.trim());
