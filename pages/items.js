@@ -48,13 +48,17 @@ const ItemsPage = () => {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th className={styles.KeywordsColumn}>Keywords</th>
+                <th>Shop ID</th>
+                <th>Item ID</th>
+                <th>Keywords</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
+                  <td>1234</td>
+                  <td>{item._id}</td>
                   <td>{item.name}</td>
                   <td>
                     <button onClick={() => removeItem(item._id)}>Remove</button>
