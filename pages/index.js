@@ -95,10 +95,10 @@ export default function Home() {
             
             // Detect which query is being ran and perform actions
             if (counter === 2) {
-              setLoadingTextUpdate('Generating option 3')
+              setLoadingTextUpdate('Generating option 3');
               newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 3) {
-              setLoadingTextUpdate("Generating score.")
+              setLoadingTextUpdate("Generating score.");
               counter += 1;
 
               newAllChat.push({ role: "options", content: firstParagraph });
@@ -107,7 +107,7 @@ export default function Home() {
               counter = 0;
               setIsLoading(false);
             } else {
-              setLoadingTextUpdate('Generating option 2')
+              setLoadingTextUpdate('Generating option 2');
               newAllChat.push({ role: "options", content: firstParagraph });
             }
             return newAllChat;
@@ -186,6 +186,7 @@ export default function Home() {
   // Function to process data sequentially
   const processData = async (strings) => {
     for (const str of strings) {
+      setLoadingTextUpdate('Generating option 1');
       setIsLoading(true);
       await sendMessage(str.trim());
       // Wait for isLoading to become false before continuing
@@ -200,6 +201,13 @@ export default function Home() {
     }
   }, [isProcessed, strings]);
 
+  useEffect(() => {
+    if (allChat.length === 0 && isProcessed) {
+      setIsLoading(true);
+      setIsProcessed(false);
+    }
+  }, [allChat.length]);
+
   return (
     <div className={styles.body}>
       <Head>
@@ -207,7 +215,7 @@ export default function Home() {
       </Head>
       <div className="header">
         <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-        {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Submit a listing. Three optimized options will display here.</p>}
+        {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Optimized options will display here.</p>}
         <button
           className={styles.dataButton}
           type="button"
