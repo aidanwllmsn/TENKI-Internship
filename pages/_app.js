@@ -1,5 +1,4 @@
 import { PageProvider } from '../context/PageContext';
-import styles from "./index.module.css";
 
 function MyApp({ Component, pageProps }) {
   return (

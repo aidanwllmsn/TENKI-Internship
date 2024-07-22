@@ -2,22 +2,19 @@ import Head from "next/head";
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 import { usePageContext } from '../context/PageContext';
-import { useWaitForLoading } from './useWaitForLoading';
+import { useWaitForLoading } from '../hooks/useWaitForLoading';
 import styles from "./index.module.css";
 export default function Home() {
-  const [message, setMessage] = useState("");
   const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
   const [items, setItems] = useState([]);
-  const [userMessage, setUserMessage] = useState([]);
   const [loadingText, setLoadingText] = useState('Analyzing');
   const [loadingTextUpdate, setLoadingTextUpdate] = useState('Generating option 1')
   const [showMessage, setShowMessage] = useState(false);
-
-  const router = useRouter(); // Get router object
-
   const [strings, setStrings] = useState([]);
   const waitForLoading = useWaitForLoading(isLoading);
+
+  const router = useRouter(); // Get router object
 
   useEffect(() => {
     const fetchData = async () => {
@@ -186,8 +183,8 @@ export default function Home() {
     }
   };
 
-  // Function to process strings sequentially
-  const processStringsSequentially = async (strings) => {
+  // Function to process data sequentially
+  const processData = async (strings) => {
     for (const str of strings) {
       setIsLoading(true);
       await sendMessage(str.trim());
@@ -195,13 +192,11 @@ export default function Home() {
       await waitForLoading();
     }
     setIsProcessed(true);
-    console.log(isProcessed);
   };
 
   useEffect(() => {
-    console.log(isProcessed);
     if (!isProcessed && strings.length > 0) {
-      processStringsSequentially(strings);
+      processData(strings);
     }
   }, [isProcessed, strings]);
 
@@ -231,35 +226,6 @@ export default function Home() {
         {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
         {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
       </div>
-      {/* <div className={styles.messageInputContainer}>
-        <form onSubmit={onSubmit}>
-          <textarea
-            className={styles.textarea}
-            name="message"
-            placeholder="Paste the listing here..."
-            required
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          ></textarea>
-          <div className={styles.buttonGroup}>
-            <input className={styles.inputSubmit} type="submit" value="Optimize" />
-            <button
-              className={styles.inputGen}
-              type="button"
-              onClick={regenerate}
-            >
-              Regenerate
-            </button>
-            <button
-              className={styles.inputButton}
-              type="button"
-              onClick={clearChat}
-            >
-              Clear
-            </button>
-          </div>
-        </form>
-      </div> */}
       <div className={`${styles.successMessage} ${showMessage ? styles.show : styles.hide}`}>
         Successfully Saved
       </div>
