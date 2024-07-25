@@ -68,14 +68,37 @@
   background-color: #afafb1;
 }
 
-.chatContainer {
-  max-width: 1000px;
+.listing {
+  text-align: center;
+  font-weight: bold;
+}
+
+.pageContainer {
+  display: flex;
   width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
+  align-items: flex-start;
+}
+
+.leftTextBox {
+  width: 25%;
+  max-width: 25%;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  overflow: auto;
+}
+
+.chatContainer {
+  width: 75%;
+  max-width: 75%;
+  margin-left: auto;
   padding-top: 20px;
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap; /* Allow wrapping to the next line */
+  flex-wrap: wrap;
   align-items: stretch;
   justify-content: space-between;
   padding-bottom: 160px;
@@ -85,17 +108,17 @@
 
 .chatBox {
   display: flex;
-  align-items: flex-start; /* Aligns the text at the top */
-  justify-content: center; /* Centers the text horizontally */
+  align-items: flex-start;
+  justify-content: center;
   text-align: left;
-  width: 30%; /* Adjust the width as needed */
+  width: 30%;
   padding: 12px;
   border: 1px solid #10a37f;
   border-radius: 4px;
-  margin: 0 10px; /* Add some margin between boxes */
+  margin: 0 10px;
   background-color: #f1f1f1;
   min-height: 300px;
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  box-sizing: border-box;
   cursor: pointer;
 }
 
@@ -108,15 +131,14 @@
   padding: 12px;
   border: 1px solid #10a37f;
   border-radius: 4px;
-  margin: 20px 10px 20px; /* Add some margin above the box */
+  margin: 20px 10px 20px;
   background-color: #f1f1f1;
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  box-sizing: border-box;
   display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  text-align: center; /* Center text horizontally */
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
-
 
 .successMessage {
   position: fixed;
