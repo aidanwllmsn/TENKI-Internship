@@ -5,7 +5,7 @@ import { usePageContext } from '../context/PageContext';
 import { useWaitForLoading } from '../hooks/useWaitForLoading';
 import styles from "./index.module.css";
 export default function Home() {
-  const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading } = usePageContext();
+  const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading, listing, setListing } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
   const [items, setItems] = useState([]);
   const [loadingText, setLoadingText] = useState('Analyzing');
@@ -94,7 +94,11 @@ export default function Home() {
             const newAllChat = [...prevAllChat];
             
             // Detect which query is being ran and perform actions
-            if (counter === 2) {
+            if (counter == 1 ) {
+              setListing(prevListing => [...prevListing, message.substring(message.indexOf("item:"))]);
+              setLoadingTextUpdate('Generating option 2');
+              newAllChat.push({ role: "options", content: firstParagraph });
+            } else if (counter === 2) {
               setLoadingTextUpdate('Generating option 3');
               newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 3) {
@@ -172,6 +176,7 @@ export default function Home() {
         setItems([...items, result.data]);
         const { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
+        setListing(prevListing=> prevListing.slice(1));
         setAllChat(newChat);
         setShowMessage(true);
       } else {
@@ -224,16 +229,27 @@ export default function Home() {
           Saved Keywords
         </button>
       </div>
-      <div className={styles.chatContainer}>
-      {allChat.map((msg, index) => (
-          <button onClick={() => addItem(msg.content, index)} key={index}
-            className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}>
-            {msg.content}
-          </button>
-      ))}
-        {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
-        {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
+      <div className={styles.pageContainer}>
+    <div className={styles.leftTextBox}>
+      <div className={styles.listing}>Current Listing:</div>
+      <div>
+        {listing.length > 0 ? listing[0] : "Loading Listing..."}
       </div>
+    </div>
+  <div className={styles.chatContainer}>
+    {allChat.map((msg, index) => (
+      <button
+        onClick={() => addItem(msg.content, index)}
+        key={index}
+        className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}
+      >
+        {msg.content}
+      </button>
+    ))}
+    {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
+    {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
+  </div>
+</div>
       <div className={`${styles.successMessage} ${showMessage ? styles.show : styles.hide}`}>
         Successfully Saved
       </div>
