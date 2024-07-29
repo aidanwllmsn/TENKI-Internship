@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import { usePageContext } from '../context/PageContext';
 import { useWaitForLoading } from '../hooks/useWaitForLoading';
 import styles from "./index.module.css";
+import { fetchCsv } from './api/readCSV';
+
 export default function Home() {
   const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading, listing, setListing } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
@@ -13,17 +15,93 @@ export default function Home() {
   const [showMessage, setShowMessage] = useState(false);
   const [strings, setStrings] = useState([]);
   const waitForLoading = useWaitForLoading(isLoading);
-
-  const router = useRouter(); // Get router object
+  const [allRows, setAllRows] = useState([]);
+  const [currentRows, setCurrentRows] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const response = await fetch('/api/strings');
-      const data = await response.json();
-      setStrings(data);
-    };
-    fetchData();
-  }, []);
+    if (!isProcessed && strings.length === 0) {
+    fetchCsv((data) => {
+        setAllRows(data);
+        loadNextChunk(data, 1); // Load the first chunk initially
+        console.log('Fetched Rows:', data); // Debug: Log the fetched rows data
+    });
+  }
+}, [isProcessed, strings]);
+
+useEffect(() => {
+  if (currentRows.length > 0) {
+      const formattedStrings = currentRows.map(row => {
+          const concatenatedString = `Instructions for Optimizing Keywords for Rakuten Listings:
+
+Objective: Enhance search visibility and relevance of Rakuten listings through strategic keyword optimization, aligning with customer search behaviors and Rakuten's platform standards. The goal is to meticulously analyze and optimize the listing to attract a broader audience by leveraging a comprehensive set of keywords.
+
+
+1. Comprehensive Review of Listing Elements:
+Initial Analysis: Start by examining the list of initial keywords, the product title, catch copy, and the product description. This review is essential for understanding the product’s key features and unique selling propositions.
+
+2. Strategic Generation of "関連キーワード" (Related Keywords):
+- Expansion with Synonyms and Related Terms: Use the initial keywords as a base and methodically expand this list by incorporating synonyms and related terms. Focus on including terms that highlight product specifications (size, material, color, age suitability) and any unique features or benefits not directly mentioned in the initial list.
+- Explicit Synonym Inclusion: It is important to add synonyms for key attributes and related terms that potential customers might use in their search queries. This step is vital for capturing a wide range of customer intents.
+
+3. Detailed Keyword Categorization for Precision:
+- Ignored Keywords Because Not in Content: Identify and list any provided keywords not directly referenced or implied in the product description, marking "N/A" if none apply.
+- Used from List Although Not Directly in Content: Document the keywords from the initial list that have been included in the 関連キーワード (related keywords) section despite not appearing in the product's title, catch copy, or description. Indicate "N/A" if not applicable.
+- Inclusion of Synonyms/Similar Terms: Actively seek and list additional synonyms or closely related terms derived from the product content that were not part of the initial keyword set. This step is crucial for broadening the search visibility of the listing.
+
+4. Ensure Coherence, Relevance, and Platform Compliance:
+Ensure all keywords and categorized lists are presented clearly and cohesively, adhering to Rakuten's preferred formatting. All terms must be directly relevant and accurately reflect the product to enhance searchability and meet Rakuten’s SEO standards.
+
+5. Formatting:
+- Result should include 4 sections:
+関連キーワード: (bold)
+followed by list (keywords separated by space)
+
+- Ignored Keywords Because Not in Content
+- Used from List Although Not Directly in Content
+- Inclusion of Synonyms/Similar Terms
+each one of 3 above is followed by list of keywords, one per line (or N/A).
+
+- No Explanatory Text: Exclude any form of explanatory text before, within, or after the listing of requested results. The response should be limited strictly to the output or data requested.
+- Adhere to Requested Structure: Follow the structure requested for the response meticulously. If the request specifies a list, provide only the list in the format and order requested without deviation.
+- Clear and Concise: Keep all listings clear, concise, and directly relevant to the instructions given. Unnecessary elaboration or deviation from the requested format is to be avoided.
+
+6. Final Review for Comprehensive Coverage and Strategic Alignment:
+- Conduct a thorough review to ensure the keyword list is exhaustive and aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices.
+- Ensure that keywords incorporated into the 関連キーワード section are accurately identified as either directly mentioned in the listing content (title, catch copy, product description) or included based on their relevance to the product, without direct mention within the main text. to summarize, process should be:
+Initial Keyword Review: "Start by reviewing the provided keywords. Determine their direct relevance to the product by checking if they or their close derivatives appear in the product title, catch copy, or description."
+
+Generating Related Keywords: "Expand the initial keyword list by adding synonyms and related terms. Include only those terms that are directly associated with the product’s features, benefits, or use cases. Avoid adding general terms that are not specific to the product."
+
+Categorization of Keywords:"List any keywords from the provided list that are not found in the product's title, catch copy, or description under 'Ignored Keywords Because Not in Content.'"
+"For 'Used from List Although Not Directly in Content,' include keywords that, while not explicitly mentioned, are closely related to the product's features or benefits and have been included in the related keywords section."
+"Under 'Inclusion of Synonyms/Similar Terms,' list additional relevant terms derived from the listing content that expand the search visibility but were not included in the initial set."
+
+Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword lists to ensure they are exhaustive, relevant, and aligned with strategic objectives for maximizing search visibility. Adjust as necessary for coherence and compliance with Rakuten’s standards."
+
+Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row[4]}, ID: ${row[5]}, Keywords: ${row.slice(9).join(' ')}`;
+          return concatenatedString;
+      });
+      setStrings(formattedStrings);
+      processData(formattedStrings);  
+  }
+}, [currentRows]);
+
+const loadNextChunk = (data, startIndex) => {
+  const nextChunk = data.slice(startIndex, startIndex + 5); // Amount of queries in a chunk
+  setCurrentRows(nextChunk);
+  setCurrentIndex(startIndex + nextChunk.length);
+};
+
+useEffect(() => {
+  if (allChat.length === 0 && isProcessed) {
+    setIsLoading(true);
+    setIsProcessed(false);
+    loadNextChunk(allRows, currentIndex);
+  }
+}, [allChat]);
+
+  const router = useRouter(); // Get router object
 
   useEffect(() => { // Sucessfully saved message
     if (showMessage) {
@@ -95,7 +173,7 @@ export default function Home() {
             
             // Detect which query is being ran and perform actions
             if (counter == 1 ) {
-              setListing(prevListing => [...prevListing, message.substring(message.indexOf("item:"))]);
+              setListing(prevListing => [...prevListing, message.substring(message.indexOf("Item:"))]);
               setLoadingTextUpdate('Generating option 2');
               newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 2) {
@@ -176,7 +254,7 @@ export default function Home() {
         setItems([...items, result.data]);
         const { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
-        setListing(prevListing=> prevListing.slice(1));
+        setListing(prevListing => prevListing.slice(1));
         setAllChat(newChat);
         setShowMessage(true);
       } else {
@@ -191,6 +269,7 @@ export default function Home() {
   // Function to process data sequentially
   const processData = async (strings) => {
     for (const str of strings) {
+      console.log(str);
       setLoadingTextUpdate('Generating option 1');
       setIsLoading(true);
       await sendMessage(str.trim());
@@ -199,19 +278,6 @@ export default function Home() {
     }
     setIsProcessed(true);
   };
-
-  useEffect(() => {
-    if (!isProcessed && strings.length > 0) {
-      processData(strings);
-    }
-  }, [isProcessed, strings]);
-
-  useEffect(() => {
-    if (allChat.length === 0 && isProcessed) {
-      setIsLoading(true);
-      setIsProcessed(false);
-    }
-  }, [allChat.length]);
 
   return (
     <div className={styles.body}>
