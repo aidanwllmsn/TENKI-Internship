@@ -14,6 +14,7 @@ export default function Home() {
   const [loadingText, setLoadingText] = useState('Analyzing');
   const [loadingTextUpdate, setLoadingTextUpdate] = useState('Generating option 1')
   const [showMessage, setShowMessage] = useState(false);
+  const [showMessage2, setShowMessage2] = useState(false);
   const [strings, setStrings] = useState([]);
   const waitForLoading = useWaitForLoading(isLoading);
   const [allRows, setAllRows] = useState([]);
@@ -106,13 +107,14 @@ useEffect(() => {
   const router = useRouter(); // Get router object
 
   useEffect(() => { // Sucessfully saved message
-    if (showMessage) {
+    if (showMessage || showMessage2) {
       const timer = setTimeout(() => {
         setShowMessage(false);
+        setShowMessage2(false);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [showMessage]);
+  }, [showMessage, showMessage2]);
 
   useEffect(() => { // Analyzing dot animation
     if (isLoading) {
@@ -129,6 +131,22 @@ useEffect(() => {
     }
   }, [isLoading]);
 
+  const highlightWords = (message, red, yellow) => {
+    let highlightedMessage = message;
+
+    red.forEach(word => {
+      const regex = new RegExp(`\\b(${word})\\b`, 'gi');
+      highlightedMessage = highlightedMessage.replace(regex, `<span class="${styles.highlightRed}">$1</span>`);
+    });
+
+    yellow.forEach(word => {
+      const regex = new RegExp(`(${word})`, 'gi');
+      highlightedMessage = highlightedMessage.replace(regex, `<span class="${styles.highlightYellow}">$1</span>`);
+    });
+
+    return highlightedMessage;
+  };
+
   // The optimizaton queries. Change as needed
   const queries = [
     'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"', 
@@ -137,6 +155,8 @@ useEffect(() => {
   ]
   // Counter keeps track of which query is being executed
   let counter = 0;
+  let unrelatedWords = [];
+  let inclusionWords = [];
 
   // Send query message to GPT
   const sendMessage = async (message) => { 
@@ -164,28 +184,56 @@ useEffect(() => {
 
         // Detect end of stream
         if (parsedData.end_of_stream) {
+          accumulatedData= accumulatedData.replace(/- /g, '');
           eventSource.close();
-          console.log(accumulatedData);
           const firstParagraph = accumulatedData.split('\n\n')[0];
+          let formattedPara = firstParagraph.replace(/,/g, '');
+          console.log(counter);
+
+          if (counter === 0) {
+            let startMarker = "Used from List Although Not Directly in Content";
+            let endMarker = "Inclusion of Synonyms/Similar Terms";
+
+            // Find the start and end index
+            let startIndex = accumulatedData.indexOf(startMarker) + startMarker.length;
+            let endIndex = accumulatedData.indexOf(endMarker);
+
+            // Extract the substring between the markers
+            let extractedString = accumulatedData.substring(startIndex, endIndex).trim();
+            unrelatedWords = extractedString.split('\n').map(word => word.trim()).filter(word => word);
+
+            let startIndex2 = accumulatedData.indexOf(endMarker) + endMarker.length;
+
+            // Extract the substring from the start index to the end of the string
+            let extractedString2 = accumulatedData.substring(startIndex2).trim();
+
+            // Split the string into an array by newlines and filter out empty strings
+            inclusionWords = extractedString2.split('\n').map(word => word.trim()).filter(word => word);
+          }
+
+          console.log(accumulatedData);
+          console.log(unrelatedWords);
+          console.log(inclusionWords);
+          let highlighted = highlightWords(formattedPara, unrelatedWords, inclusionWords);
           setAllChat((prevAllChat) => {
             const newAllChat = [...prevAllChat];
             
             // Detect which query is being ran and perform actions
             if (counter === 2) {
               setLoadingTextUpdate('Generating option 3');
-              newAllChat.push({ role: "options", content: firstParagraph });
+              newAllChat.push({ role: "options", content: highlighted });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
               counter += 1;
 
-              newAllChat.push({ role: "options", content: firstParagraph });
+              newAllChat.push({ role: "options", content: highlighted });
             } else if (counter === 4) {
-              newAllChat.push({ role: "score", content: firstParagraph }); 
+              newAllChat.push({ role: "score", content: highlighted }); 
               counter = 0;
               setIsLoading(false);
             } else {
               setLoadingTextUpdate('Generating option 2');
-              newAllChat.push({ role: "options", content: firstParagraph });
+              newAllChat.push({ role: "options", content: highlighted });
             }
             return newAllChat;
           }); 
@@ -208,7 +256,10 @@ useEffect(() => {
 
   // Go to the saved keywords page
   const showTable = async () => {
-    if (isLoading) return;
+    if (isLoading) {
+      setShowMessage2(true);
+      return;
+    }
     setPageState(allChat);
     router.push('/items');
   };
@@ -293,7 +344,7 @@ useEffect(() => {
     <div className={styles.leftTextBox}>
       {/* <div className={styles.listing}>Current Listing:</div> */}
       <div>
-      <RawHtmlComponent htmlContent={listing[0]} width="100%" height="700px" />
+      <RawHtmlComponent htmlContent={listing[0]} width="100%" height="100vh" />
         {/* {listing.length > 0 ? listing[0] : "Loading Listing..."} */}
       </div>
     </div>
@@ -304,7 +355,7 @@ useEffect(() => {
         key={index}
         className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}
       >
-        {msg.content}
+        <div dangerouslySetInnerHTML={{ __html: msg.content }} />
       </button>
     ))}
     {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
@@ -313,6 +364,9 @@ useEffect(() => {
 </div>
       <div className={`${styles.successMessage} ${showMessage ? styles.show : styles.hide}`}>
         Successfully Saved
+      </div>
+      <div className={`${styles.errorMessage} ${showMessage2 ? styles.show : styles.hide}`}>
+        Wait for Analysis to finish
       </div>
     </div>
   );

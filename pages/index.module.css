@@ -81,10 +81,6 @@
   align-items: flex-start;
 }
 
-.highlight {
-  color: red;
-}
-
 .leftTextBox {
   width: 50%;
   max-width: 50%;
@@ -126,6 +122,14 @@
   cursor: pointer;
 }
 
+.chatBox .highlightRed {
+  color: red; /* Ensure this overrides any parent styles */
+}
+
+.chatBox .highlightYellow {
+  color:darkgoldenrod; /* Ensure this overrides any parent styles */
+}
+
 .chatBox:hover {
   background-color: #d7d6d6;
 }
@@ -150,6 +154,21 @@
   right: auto;
   left: auto;
   background-color: #10a37f;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 20px;
+  border-radius: 3px;
+  transition: top 0.5s ease-in-out;
+  z-index: 1000;
+}
+
+.errorMessage {
+  position: fixed;
+  top: -50px;
+  right: auto;
+  left: auto;
+  background-color: #c32222;
   color: white;
   text-align: center;
   padding: 10px;
