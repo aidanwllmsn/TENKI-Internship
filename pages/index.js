@@ -5,6 +5,7 @@ import { usePageContext } from '../context/PageContext';
 import { useWaitForLoading } from '../hooks/useWaitForLoading';
 import styles from "./index.module.css";
 import { fetchCsv } from './api/readCSV';
+import RawHtmlComponent from './api/iframe';
 
 export default function Home() {
   const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading, listing, setListing } = usePageContext();
@@ -80,6 +81,7 @@ Categorization of Keywords:"List any keywords from the provided list that are no
 Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword lists to ensure they are exhaustive, relevant, and aligned with strategic objectives for maximizing search visibility. Adjust as necessary for coherence and compliance with Rakuten’s standards."
 
 Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row[4]}, ID: ${row[5]}, Keywords: ${row.slice(9).join(' ')}`;
+          setListing(prevListing => [...prevListing, `${row[3]}`]);
           return concatenatedString;
       });
       setStrings(formattedStrings);
@@ -88,7 +90,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 }, [currentRows]);
 
 const loadNextChunk = (data, startIndex) => {
-  const nextChunk = data.slice(startIndex, startIndex + 5); // Amount of queries in a chunk
+  const nextChunk = data.slice(startIndex, startIndex + 3); // Amount of queries in a chunk
   setCurrentRows(nextChunk);
   setCurrentIndex(startIndex + nextChunk.length);
 };
@@ -141,10 +143,6 @@ useEffect(() => {
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
 
-    if (counter == 0) {
-      message = 'Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}\n\n" ' + message;
-    }
-
     // Send the user's message to the server
     const response = await fetch("/api/generate?endpoint=chat", {
       method: "POST",
@@ -167,16 +165,13 @@ useEffect(() => {
         // Detect end of stream
         if (parsedData.end_of_stream) {
           eventSource.close();
+          console.log(accumulatedData);
           const firstParagraph = accumulatedData.split('\n\n')[0];
           setAllChat((prevAllChat) => {
             const newAllChat = [...prevAllChat];
             
             // Detect which query is being ran and perform actions
-            if (counter == 1 ) {
-              setListing(prevListing => [...prevListing, message.substring(message.indexOf("Item:"))]);
-              setLoadingTextUpdate('Generating option 2');
-              newAllChat.push({ role: "options", content: firstParagraph });
-            } else if (counter === 2) {
+            if (counter === 2) {
               setLoadingTextUpdate('Generating option 3');
               newAllChat.push({ role: "options", content: firstParagraph });
             } else if (counter === 3) {
@@ -269,7 +264,6 @@ useEffect(() => {
   // Function to process data sequentially
   const processData = async (strings) => {
     for (const str of strings) {
-      console.log(str);
       setLoadingTextUpdate('Generating option 1');
       setIsLoading(true);
       await sendMessage(str.trim());
@@ -297,9 +291,10 @@ useEffect(() => {
       </div>
       <div className={styles.pageContainer}>
     <div className={styles.leftTextBox}>
-      <div className={styles.listing}>Current Listing:</div>
+      {/* <div className={styles.listing}>Current Listing:</div> */}
       <div>
-        {listing.length > 0 ? listing[0] : "Loading Listing..."}
+      <RawHtmlComponent htmlContent={listing[0]} width="100%" height="700px" />
+        {/* {listing.length > 0 ? listing[0] : "Loading Listing..."} */}
       </div>
     </div>
   <div className={styles.chatContainer}>
