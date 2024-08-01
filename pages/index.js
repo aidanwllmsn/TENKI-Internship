@@ -1,18 +1,29 @@
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import { useRouter } from 'next/router';
-import { usePageContext } from '../context/PageContext';
-import { useWaitForLoading } from '../hooks/useWaitForLoading';
+import { useRouter } from "next/router";
+import { usePageContext } from "../context/PageContext";
+import { useWaitForLoading } from "../hooks/useWaitForLoading";
 import styles from "./index.module.css";
-import { fetchCsv } from './api/readCSV';
-import RawHtmlComponent from './api/iframe';
+import Papa from 'papaparse';
+import RawHtmlComponent from "./api/iframe";
 
 export default function Home() {
-  const { pageState, setPageState, isProcessed, setIsProcessed, isLoading, setIsLoading, listing, setListing } = usePageContext();
+  const {
+    pageState,
+    setPageState,
+    isProcessed,
+    setIsProcessed,
+    isLoading,
+    setIsLoading,
+    listing,
+    setListing,
+  } = usePageContext();
   const [allChat, setAllChat] = useState(pageState || []);
   const [items, setItems] = useState([]);
-  const [loadingText, setLoadingText] = useState('Analyzing');
-  const [loadingTextUpdate, setLoadingTextUpdate] = useState('Generating option 1')
+  const [loadingText, setLoadingText] = useState("Analyzing");
+  const [loadingTextUpdate, setLoadingTextUpdate] = useState(
+    "Generating option 1"
+  );
   const [showMessage, setShowMessage] = useState(false);
   const [showMessage2, setShowMessage2] = useState(false);
   const [strings, setStrings] = useState([]);
@@ -22,19 +33,40 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (!isProcessed && strings.length === 0) {
-    fetchCsv((data) => {
-        setAllRows(data);
-        loadNextChunk(data, 1); // Load the first chunk initially
-        console.log('Fetched Rows:', data); // Debug: Log the fetched rows data
-    });
-  }
-}, [isProcessed, strings]);
+    if (!isProcessed && allRows.length === 0) {
+      fetch('/data/glv-sample2.csv') // Update with your actual file path
+        .then(response => response.text())
+        .then(csvData => {
+          Papa.parse(csvData, {
+            header: true,
+            dynamicTyping: true,
+            chunk: function(results) {
+              setAllRows(prevRows => [...prevRows, ...results.data]);
+              if (results.errors.length) {
+                console.error('Error parsing CSV:', results.errors);
+              }
+            },
+            complete: function() {
+              // console.log('Fetched Rows:', allRows); // Debug: Log the fetched rows data
+            }
+          });
+        })
+        .catch((error) => {
+          console.error('Error reading CSV:', error);
+        });
+    }
+  }, [isProcessed, allRows]);
 
-useEffect(() => {
-  if (currentRows.length > 0) {
-      const formattedStrings = currentRows.map(row => {
-          const concatenatedString = `Instructions for Optimizing Keywords for Rakuten Listings:
+  useEffect(() => {
+    if (allRows.length > 0 && currentRows.length === 0) {
+      loadNextChunk(allRows, 0); // Load the first chunk initially
+    }
+  }, [allRows]);
+
+  useEffect(() => {
+    if (currentRows.length > 0) {
+      const formattedStrings = currentRows.map((row) => {
+        const concatenatedString = `Instructions for Optimizing Keywords for Rakuten Listings:
 
 Objective: Enhance search visibility and relevance of Rakuten listings through strategic keyword optimization, aligning with customer search behaviors and Rakuten's platform standards. The goal is to meticulously analyze and optimize the listing to attract a broader audience by leveraging a comprehensive set of keywords.
 
@@ -81,32 +113,33 @@ Categorization of Keywords:"List any keywords from the provided list that are no
 
 Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword lists to ensure they are exhaustive, relevant, and aligned with strategic objectives for maximizing search visibility. Adjust as necessary for coherence and compliance with Rakuten’s standards."
 
-Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row[4]}, ID: ${row[5]}, Keywords: ${row.slice(9).join(' ')}`;
-          setListing(prevListing => [...prevListing, `${row[3]}`]);
-          return concatenatedString;
+Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row['ftp_title']}, ID: ${row['item_id_url']}, Keywords: ${Object.values(row).slice(9).join(" ")}`;
+        setListing((prevListing) => [...prevListing, `${row['ftp_desc_pc']}`]);
+        return concatenatedString;
       });
       setStrings(formattedStrings);
-      processData(formattedStrings);  
-  }
-}, [currentRows]);
+      processData(formattedStrings);
+    }
+  }, [currentRows]);
 
-const loadNextChunk = (data, startIndex) => {
-  const nextChunk = data.slice(startIndex, startIndex + 3); // Amount of queries in a chunk
-  setCurrentRows(nextChunk);
-  setCurrentIndex(startIndex + nextChunk.length);
-};
+  const loadNextChunk = (data, startIndex) => {
+    const nextChunk = data.slice(startIndex, startIndex + 3); // Amount of queries in a chunk
+    setCurrentRows(nextChunk);
+    setCurrentIndex(startIndex + nextChunk.length);
+  };
 
-useEffect(() => {
-  if (allChat.length === 0 && isProcessed) {
-    setIsLoading(true);
-    setIsProcessed(false);
-    loadNextChunk(allRows, currentIndex);
-  }
-}, [allChat]);
+  useEffect(() => {
+    if (allChat.length === 0 && isProcessed) {
+      setIsLoading(true);
+      setIsProcessed(false);
+      loadNextChunk(allRows, currentIndex);
+    }
+  }, [allChat, isProcessed]);
 
   const router = useRouter(); // Get router object
 
-  useEffect(() => { // Sucessfully saved message
+  useEffect(() => {
+    // Sucessfully saved message
     if (showMessage || showMessage2) {
       const timer = setTimeout(() => {
         setShowMessage(false);
@@ -116,14 +149,15 @@ useEffect(() => {
     }
   }, [showMessage, showMessage2]);
 
-  useEffect(() => { // Analyzing dot animation
+  useEffect(() => {
+    // Analyzing dot animation
     if (isLoading) {
       const loadingInterval = setInterval(() => {
-        setLoadingText(prev => {
-          if (prev === 'Analyzing') return 'Analyzing.';
-          if (prev === 'Analyzing.') return 'Analyzing..';
-          if (prev === 'Analyzing..') return 'Analyzing...';
-          return 'Analyzing';
+        setLoadingText((prev) => {
+          if (prev === "Analyzing") return "Analyzing.";
+          if (prev === "Analyzing.") return "Analyzing..";
+          if (prev === "Analyzing..") return "Analyzing...";
+          return "Analyzing";
         });
       }, 250); // Change dots every 250ms
 
@@ -134,14 +168,20 @@ useEffect(() => {
   const highlightWords = (message, red, yellow) => {
     let highlightedMessage = message;
 
-    red.forEach(word => {
-      const regex = new RegExp(`\\b(${word})\\b`, 'gi');
-      highlightedMessage = highlightedMessage.replace(regex, `<span class="${styles.highlightRed}">$1</span>`);
+    red.forEach((word) => {
+      const regex = new RegExp(`\\b(${word})\\b`, "gi");
+      highlightedMessage = highlightedMessage.replace(
+        regex,
+        `<span class="${styles.highlightRed}">$1</span>`
+      );
     });
 
-    yellow.forEach(word => {
-      const regex = new RegExp(`(${word})`, 'gi');
-      highlightedMessage = highlightedMessage.replace(regex, `<span class="${styles.highlightYellow}">$1</span>`);
+    yellow.forEach((word) => {
+      const regex = new RegExp(`(${word})`, "gi");
+      highlightedMessage = highlightedMessage.replace(
+        regex,
+        `<span class="${styles.highlightYellow}">$1</span>`
+      );
     });
 
     return highlightedMessage;
@@ -149,17 +189,17 @@ useEffect(() => {
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"', 
+    'Generate a second response that adds even more broad synonyms/similar terms derived from the product content that were not part of the initial keyword set to broaden the search visibility of the listing. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"',
     'Generate a third response that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"',
     "Can you provide a score for each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it like so: Option 1: score, Option 2: score, Option 3: score",
-  ]
+  ];
   // Counter keeps track of which query is being executed
   let counter = 0;
   let unrelatedWords = [];
   let inclusionWords = [];
 
   // Send query message to GPT
-  const sendMessage = async (message) => { 
+  const sendMessage = async (message) => {
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
 
@@ -176,7 +216,7 @@ useEffect(() => {
     if (data.success) {
       // Open a connection to receive streamed responses
       const eventSource = new EventSource("/api/generate?endpoint=stream");
-      let accumulatedData = '';
+      let accumulatedData = "";
 
       eventSource.onmessage = function (event) {
         // Parse the event data, which is a JSON string
@@ -184,43 +224,57 @@ useEffect(() => {
 
         // Detect end of stream
         if (parsedData.end_of_stream) {
-          accumulatedData= accumulatedData.replace(/- /g, '');
+          accumulatedData = accumulatedData.replace(/- /g, "");
           eventSource.close();
-          const firstParagraph = accumulatedData.split('\n\n')[0];
-          let formattedPara = firstParagraph.replace(/,/g, '');
-          console.log(counter);
+          console.log(accumulatedData);
+          const firstParagraph = accumulatedData.split("\n\n")[0];
+          let result = firstParagraph.replace("関連キーワード: ", "");
+          let formattedPara = result.replace(/,/g, "");
 
           if (counter === 0) {
             let startMarker = "Used from List Although Not Directly in Content";
             let endMarker = "Inclusion of Synonyms/Similar Terms";
 
             // Find the start and end index
-            let startIndex = accumulatedData.indexOf(startMarker) + startMarker.length;
+            let startIndex =
+              accumulatedData.indexOf(startMarker) + startMarker.length;
             let endIndex = accumulatedData.indexOf(endMarker);
 
             // Extract the substring between the markers
-            let extractedString = accumulatedData.substring(startIndex, endIndex).trim();
-            unrelatedWords = extractedString.split('\n').map(word => word.trim()).filter(word => word);
+            let extractedString = accumulatedData
+              .substring(startIndex, endIndex)
+              .trim();
+            unrelatedWords = extractedString
+              .split("\n")
+              .map((word) => word.trim())
+              .filter((word) => word);
 
-            let startIndex2 = accumulatedData.indexOf(endMarker) + endMarker.length;
+            let startIndex2 =
+              accumulatedData.indexOf(endMarker) + endMarker.length;
 
             // Extract the substring from the start index to the end of the string
-            let extractedString2 = accumulatedData.substring(startIndex2).trim();
+            let extractedString2 = accumulatedData
+              .substring(startIndex2)
+              .trim();
 
             // Split the string into an array by newlines and filter out empty strings
-            inclusionWords = extractedString2.split('\n').map(word => word.trim()).filter(word => word);
+            inclusionWords = extractedString2
+              .split("\n")
+              .map((word) => word.trim())
+              .filter((word) => word);
           }
 
-          console.log(accumulatedData);
-          console.log(unrelatedWords);
-          console.log(inclusionWords);
-          let highlighted = highlightWords(formattedPara, unrelatedWords, inclusionWords);
+          let highlighted = highlightWords(
+            formattedPara,
+            unrelatedWords,
+            inclusionWords
+          );
           setAllChat((prevAllChat) => {
             const newAllChat = [...prevAllChat];
-            
+
             // Detect which query is being ran and perform actions
             if (counter === 2) {
-              setLoadingTextUpdate('Generating option 3');
+              setLoadingTextUpdate("Generating option 3");
               newAllChat.push({ role: "options", content: highlighted });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
@@ -228,31 +282,31 @@ useEffect(() => {
 
               newAllChat.push({ role: "options", content: highlighted });
             } else if (counter === 4) {
-              newAllChat.push({ role: "score", content: highlighted }); 
+              newAllChat.push({ role: "score", content: highlighted });
               counter = 0;
               setIsLoading(false);
             } else {
-              setLoadingTextUpdate('Generating option 2');
+              setLoadingTextUpdate("Generating option 2");
               newAllChat.push({ role: "options", content: highlighted });
             }
             return newAllChat;
-          }); 
+          });
 
           // Call queries, then clear chat history
-          if (counter < 3){      
+          if (counter < 3) {
             counter += 1;
             sendMessage(queries[counter - 1]); // Call queries once the stream is done
-          } 
+          }
         } else {
-         accumulatedData += parsedData;
-       }
+          accumulatedData += parsedData;
+        }
       };
       eventSource.onopen = () => console.log("Connection to stream opened");
       eventSource.onerror = function () {
         eventSource.close();
       };
     }
-   };
+  };
 
   // Go to the saved keywords page
   const showTable = async () => {
@@ -261,7 +315,7 @@ useEffect(() => {
       return;
     }
     setPageState(allChat);
-    router.push('/items');
+    router.push("/items");
   };
 
   // Find the option blocks for filtering
@@ -277,21 +331,21 @@ useEffect(() => {
     while (end < allChat.length - 1 && allChat[end + 1].role === role) {
       end++;
     }
-      // Include the following score message if present
-    if (end < allChat.length - 1 && allChat[end + 1].role === 'score') {
+    // Include the following score message if present
+    if (end < allChat.length - 1 && allChat[end + 1].role === "score") {
       end++;
     }
     return { start, end };
-    };
+  };
 
   // Add selected keywords to the databse
   const addItem = async (content, index) => {
-    if (allChat[index].role === 'score' || isLoading) return;
+    if (allChat[index].role === "score" || isLoading) return;
     try {
-      const response = await fetch('/api/addItem', {
-        method: 'POST',
+      const response = await fetch("/api/addItem", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ name: content }),
       });
@@ -300,22 +354,22 @@ useEffect(() => {
         setItems([...items, result.data]);
         const { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
-        setListing(prevListing => prevListing.slice(1));
+        setListing((prevListing) => prevListing.slice(1));
         setAllChat(newChat);
         setShowMessage(true);
       } else {
-        alert('Failed to add item.');
+        alert("Failed to add item.");
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to add item.');
+      console.error("Error:", error);
+      alert("Failed to add item.");
     }
   };
 
   // Function to process data sequentially
   const processData = async (strings) => {
     for (const str of strings) {
-      setLoadingTextUpdate('Generating option 1');
+      setLoadingTextUpdate("Generating option 1");
       setIsLoading(true);
       await sendMessage(str.trim());
       // Wait for isLoading to become false before continuing
@@ -331,41 +385,57 @@ useEffect(() => {
       </Head>
       <div className="header">
         <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-        {!isLoading && allChat.length == 0 && <p className={styles.loadingTextsmall}>Optimized options will display here.</p>}
-        <button
-          className={styles.dataButton}
-          type="button"
-          onClick={showTable}
-        >
+        {!isLoading && allChat.length == 0 && (
+          <p className={styles.loadingTextsmall}>
+            Optimized options will display here.
+          </p>
+        )}
+        <button className={styles.dataButton} type="button" onClick={showTable}>
           Saved Keywords
         </button>
       </div>
       <div className={styles.pageContainer}>
-    <div className={styles.leftTextBox}>
-      {/* <div className={styles.listing}>Current Listing:</div> */}
-      <div>
-      <RawHtmlComponent htmlContent={listing[0]} width="100%" height="100vh" />
-        {/* {listing.length > 0 ? listing[0] : "Loading Listing..."} */}
+        <div className={styles.leftTextBox}>
+          {/* <div className={styles.listing}>Current Listing:</div> */}
+          <div>
+            <RawHtmlComponent
+              htmlContent={listing[0]}
+              width="100%"
+              height="100vh"
+            />
+            {/* {listing.length > 0 ? listing[0] : "Loading Listing..."} */}
+          </div>
+        </div>
+        <div className={styles.chatContainer}>
+          {allChat.map((msg, index) => (
+            <button
+              onClick={() => addItem(msg.content, index)}
+              key={index}
+              className={
+                msg.role === "score" ? styles.chatBox2 : styles.chatBox
+              }
+            >
+              <div dangerouslySetInnerHTML={{ __html: msg.content }} />
+            </button>
+          ))}
+          {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
+          {isLoading && (
+            <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>
+          )}
+        </div>
       </div>
-    </div>
-  <div className={styles.chatContainer}>
-    {allChat.map((msg, index) => (
-      <button
-        onClick={() => addItem(msg.content, index)}
-        key={index}
-        className={msg.role === "score" ? styles.chatBox2 : styles.chatBox}
+      <div
+        className={`${styles.successMessage} ${
+          showMessage ? styles.show : styles.hide
+        }`}
       >
-        <div dangerouslySetInnerHTML={{ __html: msg.content }} />
-      </button>
-    ))}
-    {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
-    {isLoading && <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>}
-  </div>
-</div>
-      <div className={`${styles.successMessage} ${showMessage ? styles.show : styles.hide}`}>
         Successfully Saved
       </div>
-      <div className={`${styles.errorMessage} ${showMessage2 ? styles.show : styles.hide}`}>
+      <div
+        className={`${styles.errorMessage} ${
+          showMessage2 ? styles.show : styles.hide
+        }`}
+      >
         Wait for Analysis to finish
       </div>
     </div>

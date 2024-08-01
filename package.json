@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "csv-parser": "^3.0.0",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.1",
     "next": "^13.1.1",
