@@ -31,10 +31,12 @@ export default function Home() {
   const [allRows, setAllRows] = useState([]);
   const [currentRows, setCurrentRows] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [url, setUrl] = useState([]);
 
+  // Read from file in chunks
   useEffect(() => {
     if (!isProcessed && allRows.length === 0) {
-      fetch('/data/glv-sample2.csv') // Update with your actual file path
+      fetch('/data/glv-sample2.csv') // File to read from
         .then(response => response.text())
         .then(csvData => {
           Papa.parse(csvData, {
@@ -57,12 +59,14 @@ export default function Home() {
     }
   }, [isProcessed, allRows]);
 
+  // Load first chunk at launch
   useEffect(() => {
     if (allRows.length > 0 && currentRows.length === 0) {
       loadNextChunk(allRows, 0); // Load the first chunk initially
     }
   }, [allRows]);
 
+  // Parses data rows and converts them to initial query
   useEffect(() => {
     if (currentRows.length > 0) {
       const formattedStrings = currentRows.map((row) => {
@@ -115,19 +119,24 @@ Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword
 
 Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row['ftp_title']}, ID: ${row['item_id_url']}, Keywords: ${Object.values(row).slice(9).join(" ")}`;
         setListing((prevListing) => [...prevListing, `${row['ftp_desc_pc']}`]);
+        const currentUrl = `https://item.rakuten.co.jp/${row['shop_id_url']}/${row['item_id_url']}/`; // Create url and enqueue
+        setUrl((prevUrl) => [...prevUrl, currentUrl]);
         return concatenatedString;
       });
       setStrings(formattedStrings);
-      processData(formattedStrings);
+      processData(formattedStrings); // Send queries so be processed 
     }
   }, [currentRows]);
 
+  // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    const nextChunk = data.slice(startIndex, startIndex + 3); // Amount of queries in a chunk
+    const chunkSize = 3;  // Amount of queries in a chunk (change size as needed)
+    const nextChunk = data.slice(startIndex, startIndex + chunkSize);
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
   };
 
+  // Detect when to load the next chunk (no more listings showing)
   useEffect(() => {
     if (allChat.length === 0 && isProcessed) {
       setIsLoading(true);
@@ -136,10 +145,23 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   }, [allChat, isProcessed]);
 
+  // Function to process data sequentially
+  const processData = async (strings) => {
+    // Iterate chunk of initial queries
+    for (const str of strings) {
+      setLoadingTextUpdate("Generating option 1");
+      setIsLoading(true);
+      await sendMessage(str.trim());
+      // Wait for all subqueries to finish before send next initial query
+      await waitForLoading(); // Wait for isLoading to become false
+    }
+    setIsProcessed(true);
+  };
+
   const router = useRouter(); // Get router object
 
+  // Sucessfully saved message animation
   useEffect(() => {
-    // Sucessfully saved message
     if (showMessage || showMessage2) {
       const timer = setTimeout(() => {
         setShowMessage(false);
@@ -149,8 +171,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   }, [showMessage, showMessage2]);
 
+  // Analyzing dot animation
   useEffect(() => {
-    // Analyzing dot animation
     if (isLoading) {
       const loadingInterval = setInterval(() => {
         setLoadingText((prev) => {
@@ -165,9 +187,11 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   }, [isLoading]);
 
+  // Highlight words in each box red/yellow
   const highlightWords = (message, red, yellow) => {
     let highlightedMessage = message;
 
+    // Replace each detected word with new HTML
     red.forEach((word) => {
       const regex = new RegExp(`\\b(${word})\\b`, "gi");
       highlightedMessage = highlightedMessage.replace(
@@ -193,6 +217,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     'Generate a third response that uses more concise keywords that aligns with the strategic objective of maximizing search visibility on Rakuten. This includes a final check for completeness, relevance, and adherence to Rakuten’s SEO best practices. Format it like so: "関連キーワード: {新しい関連キーワード}\n\n"',
     "Can you provide a score for each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it like so: Option 1: score, Option 2: score, Option 3: score",
   ];
+
   // Counter keeps track of which query is being executed
   let counter = 0;
   let unrelatedWords = [];
@@ -355,6 +380,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         const { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         setListing((prevListing) => prevListing.slice(1));
+        setUrl((prevUrl) => prevUrl.slice(1));
+        console.log("added " + url );
         setAllChat(newChat);
         setShowMessage(true);
       } else {
@@ -366,33 +393,21 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   };
 
-  // Function to process data sequentially
-  const processData = async (strings) => {
-    for (const str of strings) {
-      setLoadingTextUpdate("Generating option 1");
-      setIsLoading(true);
-      await sendMessage(str.trim());
-      // Wait for isLoading to become false before continuing
-      await waitForLoading();
-    }
-    setIsProcessed(true);
-  };
-
   return (
     <div className={styles.body}>
       <Head>
         <title>TENKI Keyword Optimizer</title>
       </Head>
-      <div className="header">
+      <div className={styles.header}>
         <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
-        {!isLoading && allChat.length == 0 && (
-          <p className={styles.loadingTextsmall}>
-            Optimized options will display here.
-          </p>
-        )}
-        <button className={styles.dataButton} type="button" onClick={showTable}>
-          Saved Keywords
-        </button>
+        <div className={styles.buttonGroup}>
+          <button className={styles.dataButton} type="button" onClick={showTable}>
+            Saved Keywords
+          </button>
+          <a href={url[0]} className={styles.dataButton} target="_blank" rel="noopener noreferrer">
+            See Listing
+          </a>
+        </div>
       </div>
       <div className={styles.pageContainer}>
         <div className={styles.leftTextBox}>
