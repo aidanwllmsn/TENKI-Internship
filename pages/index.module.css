@@ -44,16 +44,22 @@
 }
 
 .header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
-  text-align: center;
-  padding: 10px;
+  padding: 0 0;
+}
+
+.buttonGroup{ 
+  position: absolute;
+  left: 20px;
+  display: flex;
+  gap: 25px;
 }
 
 .dataButton { 
-  position: absolute;
-  top: 20px;
-  left: 30px;
-  padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
   background-color: #e0e0e1;
@@ -62,6 +68,7 @@
   border-radius: 5px;  
   text-decoration: none;
   font-family: "ColfaxAI", Helvetica, sans-serif;
+  padding: 10px;
 }
 
 .dataButton:hover {
@@ -282,10 +289,6 @@
   overflow: auto;
   margin-right: 4px;
   flex: 3;
-}
-
-.buttonGroup {
-  display: flex;
 }
 
 .inputSubmit,
