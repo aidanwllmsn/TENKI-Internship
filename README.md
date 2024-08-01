@@ -19,7 +19,9 @@ This node.js app takes in a listing from Rakuten and provides options for more o
    ```bash
    $ npm install
    ```
-
+   ```bash
+   $ npm install papaparse
+   ```
 5. Make a copy of the example environment variables file
 
    On Linux systems: 
