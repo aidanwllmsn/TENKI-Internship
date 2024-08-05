@@ -324,6 +324,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                 role: "options",
                 content: highlighted,
                 info: moreInfo,
+                noHighlight: formattedPara
               });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
@@ -333,12 +334,14 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                 role: "options",
                 content: highlighted,
                 info: moreInfo,
+                noHighlight: formattedPara
               });
             } else if (counter === 4) {
               newAllChat.push({
                 role: "score",
                 content: highlighted,
                 info: moreInfo,
+                noHighlight: formattedPara
               });
               counter = 0;
               setIsLoading(false);
@@ -348,6 +351,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                 role: "options",
                 content: highlighted,
                 info: moreInfo,
+                noHighlight: formattedPara
               });
             }
             return newAllChat;
@@ -423,7 +427,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         setListing((prevListing) => prevListing.slice(1));
         setUrl((prevUrl) => prevUrl.slice(1));
-        console.log("added " + url);
+        const newExpanded = expanded.slice(4);
+        setExpanded(newExpanded);
         setAllChat(newChat);
         setShowMessage(true);
       } else {
@@ -481,7 +486,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         <div className={styles.chatContainer}>
           {allChat.map((msg, index) => (
             <button
-              onClick={() => addItem(msg.content, index)}
+              onClick={() => addItem(msg.noHighlight, index)}
               key={index}
               className={
                 msg.role === "score" ? styles.chatBox2 : styles.chatBox
