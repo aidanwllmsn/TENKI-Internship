@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { usePageContext } from "../context/PageContext";
 import { useWaitForLoading } from "../hooks/useWaitForLoading";
 import styles from "./index.module.css";
-import Papa from 'papaparse';
+import Papa from "papaparse";
 import RawHtmlComponent from "./api/iframe";
 
 export default function Home() {
@@ -36,25 +36,25 @@ export default function Home() {
   // Read from file in chunks
   useEffect(() => {
     if (!isProcessed && allRows.length === 0) {
-      fetch('/data/glv-sample2.csv') // File to read from
-        .then(response => response.text())
-        .then(csvData => {
+      fetch("/data/glv-sample2.csv") // File to read from
+        .then((response) => response.text())
+        .then((csvData) => {
           Papa.parse(csvData, {
             header: true,
             dynamicTyping: true,
-            chunk: function(results) {
-              setAllRows(prevRows => [...prevRows, ...results.data]);
+            chunk: function (results) {
+              setAllRows((prevRows) => [...prevRows, ...results.data]);
               if (results.errors.length) {
-                console.error('Error parsing CSV:', results.errors);
+                console.error("Error parsing CSV:", results.errors);
               }
             },
-            complete: function() {
+            complete: function () {
               // console.log('Fetched Rows:', allRows); // Debug: Log the fetched rows data
-            }
+            },
           });
         })
         .catch((error) => {
-          console.error('Error reading CSV:', error);
+          console.error("Error reading CSV:", error);
         });
     }
   }, [isProcessed, allRows]);
@@ -117,20 +117,24 @@ Categorization of Keywords:"List any keywords from the provided list that are no
 
 Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword lists to ensure they are exhaustive, relevant, and aligned with strategic objectives for maximizing search visibility. Adjust as necessary for coherence and compliance with Rakuten’s standards."
 
-Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${row['ftp_title']}, ID: ${row['item_id_url']}, Keywords: ${Object.values(row).slice(9).join(" ")}`;
-        setListing((prevListing) => [...prevListing, `${row['ftp_desc_pc']}`]);
-        const currentUrl = `https://item.rakuten.co.jp/${row['shop_id_url']}/${row['item_id_url']}/`; // Create url and enqueue
+Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: ${
+          row["ftp_title"]
+        }, ID: ${row["item_id_url"]}, Keywords: ${Object.values(row)
+          .slice(9)
+          .join(" ")}`;
+        setListing((prevListing) => [...prevListing, `${row["ftp_desc_pc"]}`]);
+        const currentUrl = `https://item.rakuten.co.jp/${row["shop_id_url"]}/${row["item_id_url"]}/`; // Create url and enqueue
         setUrl((prevUrl) => [...prevUrl, currentUrl]);
         return concatenatedString;
       });
       setStrings(formattedStrings);
-      processData(formattedStrings); // Send queries so be processed 
+      processData(formattedStrings); // Send queries so be processed
     }
   }, [currentRows]);
 
   // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    const chunkSize = 3;  // Amount of queries in a chunk (change size as needed)
+    const chunkSize = 3; // Amount of queries in a chunk (change size as needed)
     const nextChunk = data.slice(startIndex, startIndex + chunkSize);
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
@@ -365,7 +369,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Add selected keywords to the databse
   const addItem = async (content, index) => {
-    if (allChat[index].role === "score" || isLoading) return;
+    if (isLoading) return;
+    if (allChat[index].role === "score") return;
     try {
       const response = await fetch("/api/addItem", {
         method: "POST",
@@ -381,7 +386,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         setListing((prevListing) => prevListing.slice(1));
         setUrl((prevUrl) => prevUrl.slice(1));
-        console.log("added " + url );
+        console.log("added " + url);
         setAllChat(newChat);
         setShowMessage(true);
       } else {
@@ -401,10 +406,19 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       <div className={styles.header}>
         <h1 className={styles.heading1}>TENKI-JAPAN Keyword Optimizer</h1>
         <div className={styles.buttonGroup}>
-          <button className={styles.dataButton} type="button" onClick={showTable}>
+          <button
+            className={styles.dataButton}
+            type="button"
+            onClick={showTable}
+          >
             Saved Keywords
           </button>
-          <a href={url[0]} className={styles.dataButton} target="_blank" rel="noopener noreferrer">
+          <a
+            href={url[0]}
+            className={styles.dataButton}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             See Listing
           </a>
         </div>
@@ -430,7 +444,15 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                 msg.role === "score" ? styles.chatBox2 : styles.chatBox
               }
             >
-              <div dangerouslySetInnerHTML={{ __html: msg.content }} />
+              <div className={msg.role === "score" ? styles.scoreBox : ""}>
+                <div
+                  className={styles.leftText}
+                  dangerouslySetInnerHTML={{ __html: msg.content }}
+                />
+                {msg.role === "score" && (
+                  <span className={styles.rightText}>Click to Show More</span>
+                )}
+              </div>
             </button>
           ))}
           {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
