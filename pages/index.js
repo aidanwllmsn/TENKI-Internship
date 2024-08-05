@@ -32,6 +32,7 @@ export default function Home() {
   const [currentRows, setCurrentRows] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [url, setUrl] = useState([]);
+  const [expanded, setExpanded] = useState(allChat.map(() => false));
 
   // Read from file in chunks
   useEffect(() => {
@@ -217,9 +218,9 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // The optimizaton queries. Change as needed
   const queries = [
-    'Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant.',
-    'Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. MAKE SURE THE RESPONSE IS DIFFERENT FROM THE PREVIOUS ONE',
-    "Can you provide a score for each of these three responses out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it like so: Option 1: score, Option 2: score, Option 3: score",
+    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant.",
+    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. MAKE SURE THE RESPONSE IS DIFFERENT FROM THE PREVIOUS ONE",
+    "From the previous 3 responses. Can you provide a score for each out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it like so: Option 1: score, Option 2: score, Option 3: score",
   ];
 
   // Counter keeps track of which query is being executed
@@ -255,8 +256,20 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         if (parsedData.end_of_stream) {
           accumulatedData = accumulatedData.replace(/- /g, "");
           eventSource.close();
-          console.log(accumulatedData);
-          const firstParagraph = accumulatedData.split("\n\n")[0];
+          const paragraphs = accumulatedData.split("\n\n");
+          const firstParagraph = paragraphs[0];
+          let moreInfo = "";
+          if (counter < 4) {
+            moreInfo = paragraphs.slice(1).join("<br><br>");
+            moreInfo = moreInfo.split(": \n");
+            moreInfo = moreInfo.join("<br>");
+            moreInfo = moreInfo.split("\n");
+            moreInfo = moreInfo.join("<br>");
+            moreInfo = moreInfo.split(", ");
+            moreInfo = moreInfo.join("<br>");
+            moreInfo = moreInfo.split(": ");
+            moreInfo = moreInfo.join("<br>");
+          }
           let result = firstParagraph.replace("関連キーワード: ", "");
           let formattedPara = result.replace(/,/g, "");
 
@@ -298,25 +311,44 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
             unrelatedWords,
             inclusionWords
           );
+
+          moreInfo = highlighted + "<br><br>" + moreInfo;
+
           setAllChat((prevAllChat) => {
             const newAllChat = [...prevAllChat];
 
             // Detect which query is being ran and perform actions
             if (counter === 2) {
               setLoadingTextUpdate("Generating option 3");
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+              });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
               counter += 1;
 
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+              });
             } else if (counter === 4) {
-              newAllChat.push({ role: "score", content: highlighted });
+              newAllChat.push({
+                role: "score",
+                content: highlighted,
+                info: moreInfo,
+              });
               counter = 0;
               setIsLoading(false);
             } else {
               setLoadingTextUpdate("Generating option 2");
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+              });
             }
             return newAllChat;
           });
@@ -369,8 +401,13 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Add selected keywords to the databse
   const addItem = async (content, index) => {
+    if (allChat[index].role === "score") {
+      toggleContent(index);
+      return;
+    }
+
     if (isLoading) return;
-    if (allChat[index].role === "score") return;
+
     try {
       const response = await fetch("/api/addItem", {
         method: "POST",
@@ -396,6 +433,14 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       console.error("Error:", error);
       alert("Failed to add item.");
     }
+  };
+
+  const toggleContent = (index) => {
+    const newExpanded = [...expanded];
+    newExpanded[index-3] = !newExpanded[index-3];
+    newExpanded[index-2] = !newExpanded[index-2];
+    newExpanded[index-1] = !newExpanded[index-1];
+    setExpanded(newExpanded);
   };
 
   return (
@@ -425,14 +470,12 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       </div>
       <div className={styles.pageContainer}>
         <div className={styles.leftTextBox}>
-          {/* <div className={styles.listing}>Current Listing:</div> */}
           <div>
             <RawHtmlComponent
               htmlContent={listing[0]}
               width="100%"
               height="100vh"
             />
-            {/* {listing.length > 0 ? listing[0] : "Loading Listing..."} */}
           </div>
         </div>
         <div className={styles.chatContainer}>
@@ -447,7 +490,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
               <div className={msg.role === "score" ? styles.scoreBox : ""}>
                 <div
                   className={styles.leftText}
-                  dangerouslySetInnerHTML={{ __html: msg.content }}
+                  dangerouslySetInnerHTML={{ __html: expanded[index] ? msg.info : msg.content }}
                 />
                 {msg.role === "score" && (
                   <span className={styles.rightText}>Click to Show More</span>
