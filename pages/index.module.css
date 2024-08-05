@@ -91,7 +91,7 @@
 .leftTextBox {
   width: 50%;
   max-width: 50%;
-  padding-top: 20px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
