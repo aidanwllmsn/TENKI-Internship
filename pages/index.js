@@ -198,7 +198,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
     // Replace each detected word with new HTML
     red.forEach((word) => {
-      const regex = new RegExp(`\\b(${word})\\b`, "gi");
+      const regex = new RegExp(`(${word})`, "gi");
       highlightedMessage = highlightedMessage.replace(
         regex,
         `<span class="${styles.highlightRed}">$1</span>`
@@ -273,7 +273,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           let result = firstParagraph.replace("関連キーワード: ", "");
           let formattedPara = result.replace(/,/g, "");
 
-          if (counter === 0) {
+          if (counter < 4) {
             let startMarker = "Used from List Although Not Directly in Content";
             let endMarker = "Inclusion of Synonyms/Similar Terms";
 
