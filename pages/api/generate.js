@@ -42,7 +42,6 @@ export default async function handler(req, res) {
             messages: chatHistory,
             stream: true,
             temperature: 0.0,
-            max_tokens: 200
           });
 
           if (chatHistory.length == 1) {
