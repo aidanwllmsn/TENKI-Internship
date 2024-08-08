@@ -323,19 +323,39 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
             // Detect which query is being ran and perform actions
             if (counter === 2) {
               setLoadingTextUpdate("Generating option 3");
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+                noHighlight: formattedPara
+              });
             } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
               counter += 1;
 
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+                noHighlight: formattedPara
+              });
             } else if (counter === 4) {
-              newAllChat.push({ role: "score", content: highlighted });
+              newAllChat.push({
+                role: "score",
+                content: highlighted,
+                info: moreInfo,
+                noHighlight: formattedPara
+              });
               counter = 0;
               setIsLoading(false);
             } else {
               setLoadingTextUpdate("Generating option 2");
-              newAllChat.push({ role: "options", content: highlighted });
+              newAllChat.push({
+                role: "options",
+                content: highlighted,
+                info: moreInfo,
+                noHighlight: formattedPara
+              });
             }
             return newAllChat;
           });
