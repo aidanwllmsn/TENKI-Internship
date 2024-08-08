@@ -218,7 +218,6 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
   const queries = [
     "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. Format it exaclty as such '関連キーワード:'",
     "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. MAKE SURE THE RESPONSE IS DIFFERENT FROM THE PREVIOUS ONE. Format it exaclty as such '関連キーワード:'",
-    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but combine the results from the previous two responses. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. Format it exaclty as such '関連キーワード:'",
     "From the previous 3 responses. Can you provide a score for each out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it exactly like this: Option 1: score, Option 2: score, Option 3: score",
   ];
 
@@ -277,7 +276,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           let formattedPara = result.replace(/,/g, "");
           formattedPara = formattedPara.replace(/ /g, "\n");
 
-          if (counter < 5) {
+          if (counter < 4) {
             let startMarker = "Used from List Although Not Directly in Content";
             let endMarker = "Inclusion of Synonyms/Similar Terms";
 
@@ -323,50 +322,26 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
             // Detect which query is being ran and perform actions
             if (counter === 2) {
-              setLoadingTextUpdate("Generating option 2");
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara,
-              });
-            } else if (counter === 0) {
-              setLoadingTextUpdate("Generating option 1");
-              counter += 1;
-            } else if (counter === 3) {
               setLoadingTextUpdate("Generating option 3");
-
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara,
-              });
-            } else if (counter === 4) {
+              newAllChat.push({ role: "options", content: highlighted });
+            } else if (counter === 3) {
               setLoadingTextUpdate("Generating score.");
               counter += 1;
 
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara,
-              });
-            } else if (counter === 5) {
-              newAllChat.push({
-                role: "score",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara,
-              });
+              newAllChat.push({ role: "options", content: highlighted });
+            } else if (counter === 4) {
+              newAllChat.push({ role: "score", content: highlighted });
               counter = 0;
               setIsLoading(false);
+            } else {
+              setLoadingTextUpdate("Generating option 2");
+              newAllChat.push({ role: "options", content: highlighted });
             }
             return newAllChat;
           });
 
           // Call queries, then clear chat history
-          if (counter < 4) {
+          if (counter < 3) {
             counter += 1;
             sendMessage(queries[counter - 1]); // Call queries once the stream is done
           }
