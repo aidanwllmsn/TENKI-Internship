@@ -133,7 +133,10 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    const chunkSize = 3; // Amount of queries in a chunk (change size as needed)
+    let chunkSize = 1;
+    if (allRows.length > 0 && currentRows.length === 0) {
+      chunkSize = 3;
+    }
     const nextChunk = data.slice(startIndex, startIndex + chunkSize);
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
@@ -141,7 +144,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Detect when to load the next chunk (no more listings showing)
   useEffect(() => {
-    if (allChat.length === 0 && isProcessed) {
+    if (allChat.length <= 11 && isProcessed) {
       setIsLoading(true);
       setIsProcessed(false);
       loadNextChunk(allRows, currentIndex);
@@ -255,6 +258,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         // Detect end of stream
         if (parsedData.end_of_stream) {
           accumulatedData = accumulatedData.replace(/- /g, "");
+          accumulatedData = accumulatedData.replace(/\*/g, "");
           console.log(accumulatedData);
           console.log(counter);
           eventSource.close();
@@ -413,7 +417,12 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       return;
     }
 
-    if (isLoading) return;
+    const { start, end } = findBlockIndices(index);
+
+    if (isLoading && (end - start) !== 3) {
+      setShowMessage2(true);
+      return;
+    }
 
     try {
       const response = await fetch("/api/addItem", {
@@ -426,7 +435,6 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       const result = await response.json();
       if (result.success) {
         setItems([...items, result.data]);
-        const { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         setListing((prevListing) => prevListing.slice(1));
         setUrl((prevUrl) => prevUrl.slice(1));
@@ -538,7 +546,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           showMessage2 ? styles.show : styles.hide
         }`}
       >
-        Wait for Analysis to finish
+        Wait for analysis to finish
       </div>
     </div>
   );
