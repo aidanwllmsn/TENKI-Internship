@@ -230,151 +230,172 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
   const sendMessage = async (message) => {
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
-
-    // Send the user's message to the server
-    const response = await fetch("/api/generate?endpoint=chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message }),
-    });
-
-    console.log(message);
-
-    const data = await response.json();
-    if (data.success) {
-      // Open a connection to receive streamed responses
-      const eventSource = new EventSource("/api/generate?endpoint=stream");
-      let accumulatedData = "";
-
-      eventSource.onmessage = function (event) {
-        // Parse the event data, which is a JSON string
-        const parsedData = JSON.parse(event.data);
-
-        // Detect end of stream
-        if (parsedData.end_of_stream) {
-          accumulatedData = accumulatedData.replace(/- /g, "");
-          accumulatedData = accumulatedData.replace(/\*/g, "");
-          console.log(accumulatedData);
-          console.log(counter);
-          eventSource.close();
-          const paragraphs = accumulatedData.split("\n\n");
-          const firstParagraph = paragraphs[0];
-          let moreInfo = "";
-          if (counter < 5) {
-            moreInfo = paragraphs.slice(1).join("<br><br>");
-            moreInfo = moreInfo.split(": \n");
-            moreInfo = moreInfo.join("<br>");
-            moreInfo = moreInfo.split("\n");
-            moreInfo = moreInfo.join("<br>");
-            moreInfo = moreInfo.split(", ");
-            moreInfo = moreInfo.join("<br>");
-            moreInfo = moreInfo.split(": ");
-            moreInfo = moreInfo.join("<br>");
-          }
-          let result = firstParagraph.replace("関連キーワード: ", "");
-          let formattedPara = result.replace(/,/g, "");
-          formattedPara = formattedPara.replace(/ /g, "\n");
-
-          if (counter < 4) {
-            let startMarker = "Used from List Although Not Directly in Content";
-            let endMarker = "Inclusion of Synonyms/Similar Terms";
-
-            // Find the start and end index
-            let startIndex =
-              accumulatedData.indexOf(startMarker) + startMarker.length;
-            let endIndex = accumulatedData.indexOf(endMarker);
-
-            // Extract the substring between the markers
-            let extractedString = accumulatedData
-              .substring(startIndex, endIndex)
-              .trim();
-            unrelatedWords = extractedString
-              .split("\n")
-              .map((word) => word.trim())
-              .filter((word) => word);
-
-            let startIndex2 =
-              accumulatedData.indexOf(endMarker) + endMarker.length;
-
-            // Extract the substring from the start index to the end of the string
-            let extractedString2 = accumulatedData
-              .substring(startIndex2)
-              .trim();
-
-            // Split the string into an array by newlines and filter out empty strings
-            inclusionWords = extractedString2
-              .split("\n")
-              .map((word) => word.trim())
-              .filter((word) => word);
-          }
-
-          let highlighted = highlightWords(
-            formattedPara,
-            unrelatedWords,
-            inclusionWords
-          );
-
-          moreInfo = highlighted + "<br><br>" + moreInfo;
-
-          setAllChat((prevAllChat) => {
-            const newAllChat = [...prevAllChat];
-
-            // Detect which query is being ran and perform actions
-            if (counter === 2) {
-              setLoadingTextUpdate("Generating option 3");
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara
+  
+    const fetchWithTimeout = async (url, options, timeout = 10000) => {
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), timeout)
+      );
+  
+      // Use Promise.race to race between the fetch call and the timeout
+      return Promise.race([fetch(url, options), timeoutPromise]);
+    };
+  
+    const attemptFetch = async (retryCount = 0) => {
+      try {
+        const response = await fetchWithTimeout("/api/generate?endpoint=chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message }),
+        });
+  
+        const data = await response.json();
+  
+        if (data.success) {
+          // Open a connection to receive streamed responses
+          const eventSource = new EventSource("/api/generate?endpoint=stream");
+          let accumulatedData = "";
+  
+          eventSource.onmessage = function (event) {
+            // Parse the event data, which is a JSON string
+            const parsedData = JSON.parse(event.data);
+  
+            // Detect end of stream
+            if (parsedData.end_of_stream) {
+              accumulatedData = accumulatedData.replace(/- /g, "");
+              accumulatedData = accumulatedData.replace(/\*/g, "");
+              // console.log(accumulatedData);
+              eventSource.close();
+              const paragraphs = accumulatedData.split("\n\n");
+              const firstParagraph = paragraphs[0];
+              let moreInfo = "";
+              if (counter < 5) {
+                moreInfo = paragraphs.slice(1).join("<br><br>");
+                moreInfo = moreInfo.split(": \n");
+                moreInfo = moreInfo.join("<br>");
+                moreInfo = moreInfo.split("\n");
+                moreInfo = moreInfo.join("<br>");
+                moreInfo = moreInfo.split(", ");
+                moreInfo = moreInfo.join("<br>");
+                moreInfo = moreInfo.split(": ");
+                moreInfo = moreInfo.join("<br>");
+              }
+              let result = firstParagraph.replace("関連キーワード: ", "");
+              let formattedPara = result.replace(/,/g, "");
+              formattedPara = formattedPara.replace(/ /g, "\n");
+  
+              if (counter < 4) {
+                let startMarker = "Used from List Although Not Directly in Content";
+                let endMarker = "Inclusion of Synonyms/Similar Terms";
+  
+                // Find the start and end index
+                let startIndex =
+                  accumulatedData.indexOf(startMarker) + startMarker.length;
+                let endIndex = accumulatedData.indexOf(endMarker);
+  
+                // Extract the substring between the markers
+                let extractedString = accumulatedData
+                  .substring(startIndex, endIndex)
+                  .trim();
+                unrelatedWords = extractedString
+                  .split("\n")
+                  .map((word) => word.trim())
+                  .filter((word) => word);
+  
+                let startIndex2 =
+                  accumulatedData.indexOf(endMarker) + endMarker.length;
+  
+                // Extract the substring from the start index to the end of the string
+                let extractedString2 = accumulatedData
+                  .substring(startIndex2)
+                  .trim();
+  
+                // Split the string into an array by newlines and filter out empty strings
+                inclusionWords = extractedString2
+                  .split("\n")
+                  .map((word) => word.trim())
+                  .filter((word) => word);
+              }
+  
+              let highlighted = highlightWords(
+                formattedPara,
+                unrelatedWords,
+                inclusionWords
+              );
+  
+              moreInfo = highlighted + "<br><br>" + moreInfo;
+  
+              setAllChat((prevAllChat) => {
+                const newAllChat = [...prevAllChat];
+  
+                // Detect which query is being ran and perform actions
+                if (counter === 2) {
+                  setLoadingTextUpdate("Generating option 3");
+                  newAllChat.push({
+                    role: "options",
+                    content: highlighted,
+                    info: moreInfo,
+                    noHighlight: formattedPara
+                  });
+                } else if (counter === 3) {
+                  setLoadingTextUpdate("Generating score.");
+                  counter += 1;
+  
+                  newAllChat.push({
+                    role: "options",
+                    content: highlighted,
+                    info: moreInfo,
+                    noHighlight: formattedPara
+                  });
+                } else if (counter === 4) {
+                  newAllChat.push({
+                    role: "score",
+                    content: highlighted,
+                    info: moreInfo,
+                    noHighlight: formattedPara
+                  });
+                  counter = 0;
+                  setIsLoading(false);
+                } else {
+                  setLoadingTextUpdate("Generating option 2");
+                  newAllChat.push({
+                    role: "options",
+                    content: highlighted,
+                    info: moreInfo,
+                    noHighlight: formattedPara
+                  });
+                }
+                return newAllChat;
               });
-            } else if (counter === 3) {
-              setLoadingTextUpdate("Generating score.");
-              counter += 1;
-
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara
-              });
-            } else if (counter === 4) {
-              newAllChat.push({
-                role: "score",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara
-              });
-              counter = 0;
-              setIsLoading(false);
+  
+              // Call queries, then clear chat history
+              if (counter < 3) {
+                counter += 1;
+                sendMessage(queries[counter - 1]); // Call queries once the stream is done
+              }
             } else {
-              setLoadingTextUpdate("Generating option 2");
-              newAllChat.push({
-                role: "options",
-                content: highlighted,
-                info: moreInfo,
-                noHighlight: formattedPara
-              });
+              accumulatedData += parsedData;
             }
-            return newAllChat;
-          });
-
-          // Call queries, then clear chat history
-          if (counter < 3) {
-            counter += 1;
-            sendMessage(queries[counter - 1]); // Call queries once the stream is done
-          }
-        } else {
-          accumulatedData += parsedData;
+          };
+          eventSource.onopen = () => console.log("Connection to stream opened");
+          eventSource.onerror = function () {
+            eventSource.close();
+            console.log("Connection to stream closed");
+          };
         }
-      };
-      eventSource.onopen = () => console.log("Connection to stream opened");
-      eventSource.onerror = function () {
-        eventSource.close();
-      };
-    }
+      } catch (error) {
+        if (retryCount < 3) {
+          console.log(`Retrying... (${retryCount + 1}/3)`);
+          await attemptFetch(retryCount + 1); // Retry on failure
+        } else {
+          console.error("Failed after 3 retries:", error);
+        }
+      }
+    };
+  
+    await attemptFetch(); // Start the fetch attempt with retries
   };
 
   // Go to the saved keywords page
