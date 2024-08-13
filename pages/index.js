@@ -226,9 +226,31 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
   let unrelatedWords = [];
   let inclusionWords = [];
 
+  const mutex = {
+    locked: false,
+    lock() {
+      this.locked = true;
+    },
+    unlock() {
+      this.locked = false;
+    },
+    async execute(fn) {
+      while (this.locked) {
+        await new Promise((resolve) => setTimeout(resolve, 10)); // Wait until unlocked
+      }
+      this.lock();
+      try {
+        await fn();
+      } finally {
+        this.unlock();
+      }
+    },
+  };
+
   // Send query message to GPT
 
   const sendMessage = async (message) => {
+    await mutex.execute(async () => {
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
   
@@ -371,6 +393,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     };
   
     await attemptFetch();
+    });
   };
   
 
@@ -406,6 +429,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Add selected keywords to the databse
   const addItem = async (content, index) => {
+    await mutex.execute(async () => {
     if (allChat[index].role === "score") {
       toggleContent(index);
       return;
@@ -445,6 +469,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       console.error("Error:", error);
       alert("Failed to add item.");
     }
+  });
   };
 
   const toggleContent = (index) => {
