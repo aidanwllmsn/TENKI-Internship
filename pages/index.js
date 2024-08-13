@@ -412,7 +412,6 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
 
     const { start, end } = findBlockIndices(index);
-    console.log(start + " " + end);
 
     if (isLoading && (end - start) !== 3) {
       setShowMessage2(true);
@@ -432,6 +431,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         setItems([...items, result.data]);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         let ind = Math.floor(index / 4) + 1
+        await waitForLoading();
         setListing((prevListing) => prevListing.filter((_, i) => i !== ind-1));
         setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind-1));
         const newExpanded = expanded.slice(4);
