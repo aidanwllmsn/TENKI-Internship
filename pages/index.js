@@ -257,13 +257,11 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           let accumulatedData = "";
   
           eventSource.onmessage = function (event) {
-            console.log("Received data:", event.data);
             const parsedData = JSON.parse(event.data);
   
             if (parsedData.end_of_stream) {
               accumulatedData = accumulatedData.replace(/- /g, "");
               accumulatedData = accumulatedData.replace(/\*/g, "");
-              console.log(accumulatedData);
               eventSource.close();
               console.log("End of stream received");
   
@@ -432,8 +430,9 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       if (result.success) {
         setItems([...items, result.data]);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
-        setListing((prevListing) => prevListing.slice(1));
-        setUrl((prevUrl) => prevUrl.slice(1));
+        let ind = Math.floor(index / 4) + 1
+        setListing((prevListing) => prevListing.filter((_, i) => i !== ind-1));
+        setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind-1));
         const newExpanded = expanded.slice(4);
         setExpanded(newExpanded);
         setAllChat(newChat);
