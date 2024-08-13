@@ -133,15 +133,15 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    let chunkSize = 3;
+    let chunkSize = 6;
     const nextChunk = data.slice(startIndex, startIndex + chunkSize);
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
   };
 
-  // Detect when to load the next chunk (no more listings showing)
+  // Detect when to load the next chunk 
   useEffect(() => {
-    if (allChat.length === 0 && isProcessed) {
+    if (allChat.length < 13 && isProcessed) {
       setIsLoading(true);
       setIsProcessed(false);
       loadNextChunk(allRows, currentIndex);
@@ -399,12 +399,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Go to the saved keywords page
   const showTable = async () => {
-    if (isLoading) {
-      setShowMessage2(true);
-      return;
-    }
     setPageState(allChat);
-    router.push("/items");
+    window.open("/items", "_blank");
   };
 
   // Find the option blocks for filtering
@@ -526,7 +522,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           </div>
         </div>
         <div className={styles.chatContainer}>
-          {allChat.map((msg, index) => (
+          {allChat.slice(0,12).map((msg, index) => (
             <div
               key={index}
               className={
@@ -559,8 +555,8 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
               )}
             </div>
           ))}
-          {isLoading && <p className={styles.loadingText}>{loadingText}</p>}
-          {isLoading && (
+          {isLoading && allChat.length < 12 && <p className={styles.loadingText}>{loadingText}</p>}
+          {isLoading && allChat.length < 12 && (
             <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>
           )}
         </div>
