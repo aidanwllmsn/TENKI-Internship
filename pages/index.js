@@ -227,17 +227,15 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
   let inclusionWords = [];
 
   // Send query message to GPT
+
   const sendMessage = async (message) => {
     // Append user message to chat history
     setAllChat((prev) => [...prev]);
   
-    const fetchWithTimeout = async (url, options, timeout = 10000) => {
-      // Create a timeout promise
+    const fetchWithTimeout = async (url, options, timeout = 5000) => {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Request timed out")), timeout)
       );
-  
-      // Use Promise.race to race between the fetch call and the timeout
       return Promise.race([fetch(url, options), timeoutPromise]);
     };
   
@@ -259,85 +257,58 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           let accumulatedData = "";
   
           eventSource.onmessage = function (event) {
-            // Parse the event data, which is a JSON string
+            console.log("Received data:", event.data);
             const parsedData = JSON.parse(event.data);
   
-            // Detect end of stream
             if (parsedData.end_of_stream) {
               accumulatedData = accumulatedData.replace(/- /g, "");
               accumulatedData = accumulatedData.replace(/\*/g, "");
-              // console.log(accumulatedData);
+              console.log(accumulatedData);
               eventSource.close();
+              console.log("End of stream received");
+  
               const paragraphs = accumulatedData.split("\n\n");
               const firstParagraph = paragraphs[0];
               let moreInfo = "";
               if (counter < 5) {
                 moreInfo = paragraphs.slice(1).join("<br><br>");
-                moreInfo = moreInfo.split(": \n");
-                moreInfo = moreInfo.join("<br>");
-                moreInfo = moreInfo.split("\n");
-                moreInfo = moreInfo.join("<br>");
-                moreInfo = moreInfo.split(", ");
-                moreInfo = moreInfo.join("<br>");
-                moreInfo = moreInfo.split(": ");
-                moreInfo = moreInfo.join("<br>");
+                moreInfo = moreInfo.split(": \n").join("<br>");
+                moreInfo = moreInfo.split("\n").join("<br>");
+                moreInfo = moreInfo.split(", ").join("<br>");
+                moreInfo = moreInfo.split(": ").join("<br>");
               }
               let result = firstParagraph.replace("関連キーワード: ", "");
-              let formattedPara = result.replace(/,/g, "");
-              formattedPara = formattedPara.replace(/ /g, "\n");
+              let formattedPara = result.replace(/,/g, "").replace(/ /g, "\n");
   
               if (counter < 4) {
-                let startMarker = "Used from List Although Not Directly in Content";
-                let endMarker = "Inclusion of Synonyms/Similar Terms";
+                const startMarker = "Used from List Although Not Directly in Content";
+                const endMarker = "Inclusion of Synonyms/Similar Terms";
   
-                // Find the start and end index
-                let startIndex =
-                  accumulatedData.indexOf(startMarker) + startMarker.length;
-                let endIndex = accumulatedData.indexOf(endMarker);
+                const startIndex = accumulatedData.indexOf(startMarker) + startMarker.length;
+                const endIndex = accumulatedData.indexOf(endMarker);
   
-                // Extract the substring between the markers
-                let extractedString = accumulatedData
-                  .substring(startIndex, endIndex)
-                  .trim();
-                unrelatedWords = extractedString
-                  .split("\n")
-                  .map((word) => word.trim())
-                  .filter((word) => word);
+                const extractedString = accumulatedData.substring(startIndex, endIndex).trim();
+                unrelatedWords = extractedString.split("\n").map((word) => word.trim()).filter((word) => word);
   
-                let startIndex2 =
-                  accumulatedData.indexOf(endMarker) + endMarker.length;
+                const startIndex2 = accumulatedData.indexOf(endMarker) + endMarker.length;
+                const extractedString2 = accumulatedData.substring(startIndex2).trim();
   
-                // Extract the substring from the start index to the end of the string
-                let extractedString2 = accumulatedData
-                  .substring(startIndex2)
-                  .trim();
-  
-                // Split the string into an array by newlines and filter out empty strings
-                inclusionWords = extractedString2
-                  .split("\n")
-                  .map((word) => word.trim())
-                  .filter((word) => word);
+                inclusionWords = extractedString2.split("\n").map((word) => word.trim()).filter((word) => word);
               }
   
-              let highlighted = highlightWords(
-                formattedPara,
-                unrelatedWords,
-                inclusionWords
-              );
-  
+              let highlighted = highlightWords(formattedPara, unrelatedWords, inclusionWords);
               moreInfo = highlighted + "<br><br>" + moreInfo;
   
               setAllChat((prevAllChat) => {
                 const newAllChat = [...prevAllChat];
   
-                // Detect which query is being ran and perform actions
                 if (counter === 2) {
                   setLoadingTextUpdate("Generating option 3");
                   newAllChat.push({
                     role: "options",
                     content: highlighted,
                     info: moreInfo,
-                    noHighlight: formattedPara
+                    noHighlight: formattedPara,
                   });
                 } else if (counter === 3) {
                   setLoadingTextUpdate("Generating score.");
@@ -347,14 +318,14 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                     role: "options",
                     content: highlighted,
                     info: moreInfo,
-                    noHighlight: formattedPara
+                    noHighlight: formattedPara,
                   });
                 } else if (counter === 4) {
                   newAllChat.push({
                     role: "score",
                     content: highlighted,
                     info: moreInfo,
-                    noHighlight: formattedPara
+                    noHighlight: formattedPara,
                   });
                   counter = 0;
                   setIsLoading(false);
@@ -364,39 +335,46 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
                     role: "options",
                     content: highlighted,
                     info: moreInfo,
-                    noHighlight: formattedPara
+                    noHighlight: formattedPara,
                   });
                 }
                 return newAllChat;
               });
   
-              // Call queries, then clear chat history
               if (counter < 3) {
                 counter += 1;
-                sendMessage(queries[counter - 1]); // Call queries once the stream is done
+                sendMessage(queries[counter - 1]);
               }
             } else {
               accumulatedData += parsedData;
             }
           };
+  
           eventSource.onopen = () => console.log("Connection to stream opened");
-          eventSource.onerror = function () {
+  
+          eventSource.onerror = function (error) {
+            console.error("Stream error:", error);
             eventSource.close();
             console.log("Connection to stream closed");
+            if (retryCount < 3) {
+              console.log(`Retrying stream... (${retryCount + 1}/3)`);
+              attemptFetch(retryCount + 1); // Retry on failure
+            }
           };
         }
       } catch (error) {
         if (retryCount < 3) {
           console.log(`Retrying... (${retryCount + 1}/3)`);
-          await attemptFetch(retryCount + 1); // Retry on failure
+          await attemptFetch(retryCount + 1);
         } else {
           console.error("Failed after 3 retries:", error);
         }
       }
     };
   
-    await attemptFetch(); // Start the fetch attempt with retries
+    await attemptFetch();
   };
+  
 
   // Go to the saved keywords page
   const showTable = async () => {
