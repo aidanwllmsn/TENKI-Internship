@@ -133,10 +133,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    let chunkSize = 1;
-    if (allRows.length > 0 && currentRows.length === 0) {
-      chunkSize = 3;
-    }
+    let chunkSize = 3;
     const nextChunk = data.slice(startIndex, startIndex + chunkSize);
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
@@ -144,7 +141,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Detect when to load the next chunk (no more listings showing)
   useEffect(() => {
-    if (allChat.length <= 11 && isProcessed) {
+    if (allChat.length === 0 && isProcessed) {
       setIsLoading(true);
       setIsProcessed(false);
       loadNextChunk(allRows, currentIndex);
