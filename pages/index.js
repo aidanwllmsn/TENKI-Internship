@@ -412,6 +412,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
 
     const { start, end } = findBlockIndices(index);
+    console.log(start + " " + end);
 
     if (isLoading && (end - start) !== 3) {
       setShowMessage2(true);
