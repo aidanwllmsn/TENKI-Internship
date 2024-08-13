@@ -434,14 +434,14 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       toggleContent(index);
       return;
     }
-
+  
     let { start, end } = findBlockIndices(index);
-
+  
     if (isLoading && (end - start) !== 3) {
       setShowMessage2(true);
       return;
     }
-
+  
     try {
       const response = await fetch("/api/addItem", {
         method: "POST",
@@ -450,17 +450,26 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
         },
         body: JSON.stringify({ name: content }),
       });
+      
       const result = await response.json();
       if (result.success) {
         setItems([...items, result.data]);
-        let { start, end } = findBlockIndices(index);
-        const newChat = allChat.filter((_, idx) => idx < start || idx > end);
-        let ind = Math.floor(index / 4) + 1
-        setListing((prevListing) => prevListing.filter((_, i) => i !== ind-1));
-        setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind-1));
+  
+        // Use a functional update to ensure you get the latest version of allChat
+        setAllChat((prevAllChat) => {
+          let { start, end } = findBlockIndices(index);
+          // Filter based on the previous state of allChat
+          const newChat = prevAllChat.filter((_, idx) => idx < start || idx > end);
+          
+          return newChat; // Return the updated allChat state
+        });
+  
+        // Update other state variables as needed
+        let ind = Math.floor(index / 4) + 1;
+        setListing((prevListing) => prevListing.filter((_, i) => i !== ind - 1));
+        setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind - 1));
         const newExpanded = expanded.slice(4);
         setExpanded(newExpanded);
-        setAllChat(newChat);
         setShowMessage(true);
       } else {
         alert("Failed to add item.");
@@ -471,6 +480,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   });
   };
+  
 
   const toggleContent = (index) => {
     const newExpanded = [...expanded];
