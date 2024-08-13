@@ -411,7 +411,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       return;
     }
 
-    const { start, end } = findBlockIndices(index);
+    let { start, end } = findBlockIndices(index);
 
     if (isLoading && (end - start) !== 3) {
       setShowMessage2(true);
@@ -429,6 +429,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
       const result = await response.json();
       if (result.success) {
         setItems([...items, result.data]);
+        let { start, end } = findBlockIndices(index);
         const newChat = allChat.filter((_, idx) => idx < start || idx > end);
         let ind = Math.floor(index / 4) + 1
         setListing((prevListing) => prevListing.filter((_, i) => i !== ind-1));
