@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
-import { usePageContext } from '../context/PageContext';
 import styles from './index.module.css';
 
+/** items.js - This file handles the contnet of the Saved Keywords page. It displays the data of each 
+ * saved keyword and performs actions.
+*/
+
 const ItemsPage = () => {
-  const router = useRouter();
   const [items, setItems] = useState([]);
-  const { pageState } = usePageContext();
   const [editingItem, setEditingItem] = useState(null);
   const [newKeywords, setNewKeywords] = useState('');
 
+  // Fetch items from database
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch('/api/items');
@@ -22,6 +23,7 @@ const ItemsPage = () => {
     fetchData();
   }, []);
 
+  // Remove an item from the database through removeItem.js
   const removeItem = async (id) => {
     const response = await fetch('/api/removeItem', {
       method: 'DELETE',
@@ -36,6 +38,7 @@ const ItemsPage = () => {
     }
   };
 
+  // Update an item from the database through updateItem.js
   const updateKeywords = async (id) => {
    const response = await fetch('/api/updateItem', {
      method: 'PUT',

@@ -1,44 +1,61 @@
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import { usePageContext } from "../context/PageContext";
 import { useWaitForLoading } from "../hooks/useWaitForLoading";
 import styles from "./index.module.css";
 import Papa from "papaparse";
 import RawHtmlComponent from "./api/iframe";
 
+/**
+ * index.js - This file handles the content of the main page. On startup, it displays a "Start Generation"
+ * button, Once pressed, it reads from a CSV file of Rakuten listings data, parses the data, then processes
+ * it to be sent to ChatGPT API. The program sends 4 queries total to ChatGPT for each listing. This consists
+ * of an initial query asking for optimized keywords for a listing, more optimized keywords, more optimized
+ * keywords again, and a score of the 3 options. The page will display 3 options for each listing,
+ * along with a score for each. The response is then stores in state "allChat", an array of {content, role}
+ * objects, where each object makes a new options/score box. There are two buttons for each listing: Save & Detail.
+ *
+ * Save - Save the specific keyword option selected to the data base and delete that listing
+ * Detial - Show the rest of the answer showing more details about the keywords
+ *
+ * Keywords that are "Used from List Although Not Directly in Content" are highlighted red and "Inclusion of
+ * Synonyms/Similar Terms" is highlighted yellow.
+ *
+ * To save processing power, the program analyzes data in chunks and displays the results for 3 listings at a time.
+ * However, once the initial 3 listings are finished analyzing, 3 more listings are analyzed in the background for
+ * efficiency, but are not displayed until one of the first 3 is saved and removed. After saving the first 3 listings
+ * and all 3 of the background listings are displayed, it begins generating the next chunk of 3 in the background.
+ * This process continues infinitly until all the listing have been read from the CSV file.
+ *
+ * On the left half of the screen, the program uses a queue to display the listing content (HTML) of the top listing
+ * from the right half. It uses the queue to update the listing content as the options from the right are saved/removed
+ */
+
 export default function Home() {
-  const {
-    pageState,
-    setPageState,
-    isProcessed,
-    setIsProcessed,
-    isLoading,
-    setIsLoading,
-    listing,
-    setListing,
-  } = usePageContext();
-  const [allChat, setAllChat] = useState(pageState || []);
-  const [items, setItems] = useState([]);
-  const [loadingText, setLoadingText] = useState("Analyzing");
+  const [isProcessed, setIsProcessed] = useState(false); // Check if current chunk of 6 has finished analyzing
+  const [isLoading, setIsLoading] = useState(false); // If a listing is currently being analyzed
+  const [listing, setListing] = useState([]); // Queue for listing HTML data
+  const [allChat, setAllChat] = useState([]); // Where all the responses are stored, [{content, role},...]
+  const [loadingText, setLoadingText] = useState("Analyzing"); // Analyzing text animation
   const [loadingTextUpdate, setLoadingTextUpdate] = useState(
     "Generating option 1"
-  );
-  const [showMessage, setShowMessage] = useState(false);
-  const [showMessage2, setShowMessage2] = useState(false);
-  const [strings, setStrings] = useState([]);
-  const waitForLoading = useWaitForLoading(isLoading);
-  const [allRows, setAllRows] = useState([]);
-  const [currentRows, setCurrentRows] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [url, setUrl] = useState([]);
-  const [expanded, setExpanded] = useState(allChat.map(() => false));
-  const [isButtonVisible, setIsButtonVisible] = useState(true);
+  ); // Dynamically updating loading text
+  const [showMessage, setShowMessage] = useState(false); // Display "Successfully Saved" message
+  const [showMessage2, setShowMessage2] = useState(false); // Display "Wait for analysis to finish" message
+  const [allRows, setAllRows] = useState([]); // All rows of data
+  const [currentRows, setCurrentRows] = useState([]); // Current row of data chunk
+  const [currentIndex, setCurrentIndex] = useState(0); // Current index of data chunk
+  const [url, setUrl] = useState([]); // Queue for listing URLs in order
+  const [expanded, setExpanded] = useState(allChat.map(() => false)); // Keeps track of which listings are expanded
+  const [isButtonVisible, setIsButtonVisible] = useState(true); // Hides "Start Generation" button
+  const waitForLoading = useWaitForLoading(isLoading); // External function to synchronize when responses finish
 
-  // Read from file in chunks
+  /** DATA READING - This section reads the data from a CSV file of a specific 
+  format and parses it into variables*/
+
+  // Read from the CSV file in chunks
   useEffect(() => {
     if (!isProcessed && allRows.length === 0) {
-      fetch("/data/glv-sample2.csv") // File to read from
+      fetch("/data/glv-sample2.csv") // File to read from (change as necessary)
         .then((response) => response.text())
         .then((csvData) => {
           Papa.parse(csvData, {
@@ -50,9 +67,7 @@ export default function Home() {
                 console.error("Error parsing CSV:", results.errors);
               }
             },
-            complete: function () {
-              // console.log('Fetched Rows:', allRows); // Debug: Log the fetched rows data
-            },
+            complete: function () {},
           });
         })
         .catch((error) => {
@@ -61,19 +76,11 @@ export default function Home() {
     }
   }, [isProcessed, allRows]);
 
-  // Load first chunk at launch
-  const loadFirstChunk = ()=> {
-    if (allRows.length > 0 && currentRows.length === 0) {
-      setIsButtonVisible(false);
-      setIsLoading(true);
-      loadNextChunk(allRows, 0); // Load the first chunk initially
-    }
-  };
-
-  // Parses data rows and converts them to initial query
+  // Once data is read, create a string for the initial query for each row of the read CSV file.
   useEffect(() => {
     if (currentRows.length > 0) {
       const formattedStrings = currentRows.map((row) => {
+        // Converts each row into desired initial query to be sent to chatGPT
         const concatenatedString = `Instructions for Optimizing Keywords for Rakuten Listings:
 
 Objective: Enhance search visibility and relevance of Rakuten listings through strategic keyword optimization, aligning with customer search behaviors and Rakuten's platform standards. The goal is to meticulously analyze and optimize the listing to attract a broader audience by leveraging a comprehensive set of keywords.
@@ -121,50 +128,296 @@ Categorization of Keywords:"List any keywords from the provided list that are no
 
 Final Check for Alignment and Relevance: EXTREMELY IMPORTANT "Review the keyword lists to ensure they are exhaustive, relevant, and aligned with strategic objectives for maximizing search visibility. Adjust as necessary for coherence and compliance with Rakuten’s standards."
 
-Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: https://item.rakuten.co.jp/${row["shop_id_url"]}/${row["item_id_url"]}/, ID: ${row["item_id_url"]}, Keywords: ${Object.values(row)
-          .slice(9)
-          .join(" ")}, title: ${row["ftp_title"]}, content: ${row["ftp_desc_pc"]}`;
-        setListing((prevListing) => [...prevListing, `${row["ftp_desc_pc"]}`]);
-        const currentUrl = `https://item.rakuten.co.jp/${row["shop_id_url"]}/${row["item_id_url"]}/`; // Create url and enqueue
-        setUrl((prevUrl) => [...prevUrl, currentUrl]);
-        return concatenatedString;
+Provide the answer in this exact format "関連キーワード: {新しい関連キーワード}. End of Instructions Item: https://item.rakuten.co.jp/${
+          row["shop_id_url"]
+        }/${row["item_id_url"]}/, ID: ${
+          row["item_id_url"]
+        }, Keywords: ${Object.values(row).slice(9).join(" ")}, title: ${
+          row["ftp_title"]
+        }, content: ${row["ftp_desc_pc"]}`; // add desired columns as variables to each query
+        setListing((prevListing) => [...prevListing, `${row["ftp_desc_pc"]}`]); // Enqueue the HTML content data into a queue
+        const currentUrl = `https://item.rakuten.co.jp/${row["shop_id_url"]}/${row["item_id_url"]}/`; // Create URL
+        setUrl((prevUrl) => [...prevUrl, currentUrl]); // Enqueue URL to be used for "See Listing" button
+        return concatenatedString; // Store all the initial queries as an array of strings to concatenatedString
       });
-      setStrings(formattedStrings);
       processData(formattedStrings); // Send queries so be processed
     }
   }, [currentRows]);
 
+  /** DATA PROCESSING - This section processes the queries in chunks and determines when to
+   * generate the next chunk*/
+
+  // Function to process initial queries sequentially
+  const processData = async (strings) => {
+    // Iterate chunk of initial queries
+    for (const str of strings) {
+      setLoadingTextUpdate("Generating option 1"); // Reset loading text
+      setIsLoading(true);
+      await sendMessage(str.trim()); // Send current string
+      await waitForLoading(); // Wait for all subqueries to finish before send next initial query
+    }
+    setIsProcessed(true); // Once all queries in chunk are finished, set as processed
+  };
+
+  // Load first chunk when "Start Generation" button is clicked
+  const loadFirstChunk = () => {
+    if (allRows.length > 0 && currentRows.length === 0) {
+      setIsButtonVisible(false); // Hide button
+      setIsLoading(true);
+      loadNextChunk(allRows, 0); // Load the first chunk
+    }
+  };
+
   // Load the next chunk
   const loadNextChunk = (data, startIndex) => {
-    let chunkSize = 6;
-    const nextChunk = data.slice(startIndex, startIndex + chunkSize);
+    let chunkSize = 6; // Chunk size (3 shown, 3 hidden)
+    const nextChunk = data.slice(startIndex, startIndex + chunkSize); // Update and save next chunk
     setCurrentRows(nextChunk);
     setCurrentIndex(startIndex + nextChunk.length);
   };
 
-  // Detect when to load the next chunk 
+  // Detect when to load the next chunk
   useEffect(() => {
-    if (allChat.length < 13 && isProcessed && !isButtonVisible) {
+    // Next chunk automaticall loads when there is lass than 13 responses (3 listings)
+    if (allChat.length < 13 && isProcessed) {
       setIsLoading(true);
       setIsProcessed(false);
       loadNextChunk(allRows, currentIndex);
     }
   }, [allChat, isProcessed]);
 
-  // Function to process data sequentially
-  const processData = async (strings) => {
-    // Iterate chunk of initial queries
-    for (const str of strings) {
-      setLoadingTextUpdate("Generating option 1");
-      setIsLoading(true);
-      await sendMessage(str.trim());
-      // Wait for all subqueries to finish before send next initial query
-      await waitForLoading(); // Wait for isLoading to become false
-    }
-    setIsProcessed(true);
+  /** ChatGPT API HANDLING - Sends messages to ChatGPT, handles the responses to be displayed*/
+
+  // Optimizaton queries. The 3 other queries that are sent to ChatGPT to optimize/score each listing.
+  // Modify as needed
+  const queries = [
+    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. Format it exaclty as such '関連キーワード:'",
+    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. MAKE SURE THE RESPONSE IS DIFFERENT FROM THE PREVIOUS ONE. Format it exaclty as such '関連キーワード:'",
+    "From the previous 3 responses. Can you provide a score for each out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it exactly like this: Option 1: score, Option 2: score, Option 3: score",
+  ];
+
+  // Variables for sendMessage
+  let counter = 0; // Keep track of current query
+  let unrelatedWords = []; // Store unrelated words (highlighted red)
+  let inclusionWords = []; // Store inclusion words (highlighted yellow)
+
+  // Send query message to ChatGPT and stores responses
+  const sendMessage = async (message) => {
+    // Mutex to not interfere with addItem()
+    await mutex.execute(async () => {
+      // Append user message to chat history
+      setAllChat((prev) => [...prev]);
+
+      // Timeout for ChatGPT API connection
+      const fetchWithTimeout = async (url, options, timeout = 5000) => {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timed out")), timeout)
+        );
+        return Promise.race([fetch(url, options), timeoutPromise]);
+      };
+
+      // Timeout/retry for API connection
+      const attemptFetch = async (retryCount = 0) => {
+        // Send message to ChatGPT
+        try {
+          const response = await fetchWithTimeout(
+            "/api/generate?endpoint=chat",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ message }),
+            }
+          );
+
+          // convert the response from a web request into a JavaScript object.
+          const data = await response.json();
+
+          // Check if successful
+          if (data.success) {
+            // Open a connection to receive streamed responses
+            const eventSource = new EventSource(
+              "/api/generate?endpoint=stream"
+            );
+            let accumulatedData = ""; // Store whole response
+
+            eventSource.onmessage = function (event) {
+              // Store data from stream
+              const parsedData = JSON.parse(event.data);
+
+              // Once stream of data has finished
+              if (parsedData.end_of_stream) {
+                eventSource.close();
+                console.log("End of stream received");
+
+                // Fomratting
+                accumulatedData = accumulatedData
+                  .replace(/- /g, "")
+                  .replace(/\*/g, "");
+                const paragraphs = accumulatedData.split("\n\n"); // Get keywords only
+                const firstParagraph = paragraphs[0];
+
+                // Get details
+                let moreInfo = "";
+                if (counter < 5) {
+                  moreInfo = paragraphs.slice(1).join("<br><br>");
+                  moreInfo = moreInfo.split(": \n").join("<br>");
+                  moreInfo = moreInfo.split("\n").join("<br>");
+                  moreInfo = moreInfo.split(", ").join("<br>");
+                  moreInfo = moreInfo.split(": ").join("<br>");
+                }
+
+                // More formatting
+                let result = firstParagraph.replace("関連キーワード: ", "");
+                let formattedPara = result
+                  .replace(/,/g, "")
+                  .replace(/ /g, "\n");
+                if (counter < 4) {
+                  const startMarker =
+                    "Used from List Although Not Directly in Content";
+                  const endMarker = "Inclusion of Synonyms/Similar Terms";
+
+                  const startIndex =
+                    accumulatedData.indexOf(startMarker) + startMarker.length;
+                  const endIndex = accumulatedData.indexOf(endMarker);
+
+                  const extractedString = accumulatedData
+                    .substring(startIndex, endIndex)
+                    .trim();
+                  unrelatedWords = extractedString
+                    .split("\n")
+                    .map((word) => word.trim())
+                    .filter((word) => word);
+
+                  const startIndex2 =
+                    accumulatedData.indexOf(endMarker) + endMarker.length;
+                  const extractedString2 = accumulatedData
+                    .substring(startIndex2)
+                    .trim();
+
+                  inclusionWords = extractedString2
+                    .split("\n")
+                    .map((word) => word.trim())
+                    .filter((word) => word);
+                }
+
+                // Highlight desired words using HTML
+                let highlighted = highlightWords(
+                  formattedPara,
+                  unrelatedWords,
+                  inclusionWords
+                );
+                moreInfo = highlighted + "<br><br>" + moreInfo;
+
+                // Store response in allChat to be displayed
+                setAllChat((prevAllChat) => {
+                  const newAllChat = [...prevAllChat];
+
+                  // Determine action for each query response
+                  if (counter === 2) {
+                    setLoadingTextUpdate("Generating option 3");
+                    newAllChat.push({
+                      role: "options",
+                      content: highlighted,
+                      info: moreInfo,
+                      noHighlight: formattedPara,
+                    });
+                  } else if (counter === 3) {
+                    setLoadingTextUpdate("Generating score.");
+                    counter += 1;
+
+                    newAllChat.push({
+                      role: "options",
+                      content: highlighted,
+                      info: moreInfo,
+                      noHighlight: formattedPara,
+                    });
+                  } else if (counter === 4) {
+                    newAllChat.push({
+                      role: "score",
+                      content: highlighted,
+                      info: moreInfo,
+                      noHighlight: formattedPara,
+                    });
+                    counter = 0;
+                    setIsLoading(false);
+                  } else {
+                    setLoadingTextUpdate("Generating option 2");
+                    newAllChat.push({
+                      role: "options",
+                      content: highlighted,
+                      info: moreInfo,
+                      noHighlight: formattedPara,
+                    });
+                  }
+                  return newAllChat;
+                });
+
+                // Recursively send other three optimization queries
+                if (counter < 3) {
+                  counter += 1;
+                  sendMessage(queries[counter - 1]);
+                }
+              } else {
+                // When stream is not finished yet, accumulate parsed data
+                accumulatedData += parsedData;
+              }
+            };
+
+            eventSource.onopen = () =>
+              console.log("Connection to stream opened");
+
+            // Error handling
+            eventSource.onerror = function (error) {
+              console.error("Stream error:", error);
+              eventSource.close();
+              console.log("Connection to stream closed");
+              if (retryCount < 3) {
+                console.log(`Retrying stream... (${retryCount + 1}/3)`);
+                attemptFetch(retryCount + 1); // Retry on failure
+              }
+            };
+          }
+        } catch (error) {
+          if (retryCount < 3) {
+            console.log(`Retrying... (${retryCount + 1}/3)`);
+            await attemptFetch(retryCount + 1);
+          } else {
+            console.error("Failed after 3 retries:", error);
+          }
+        }
+      };
+
+      await attemptFetch();
+    });
   };
 
-  const router = useRouter(); // Get router object
+  // Highlight words in each box red/yellow
+  const highlightWords = (message, red, yellow) => {
+    let highlightedMessage = message;
+
+    // Replace each detected word with new HTML
+    red.forEach((word) => {
+      const regex = new RegExp(`(${word})`, "gi");
+      highlightedMessage = highlightedMessage.replace(
+        regex,
+        `<span class="${styles.highlightRed}">$1</span>`
+      );
+    });
+
+    yellow.forEach((word) => {
+      const regex = new RegExp(`(${word})`, "gi");
+      highlightedMessage = highlightedMessage.replace(
+        regex,
+        `<span class="${styles.highlightYellow}">$1</span>`
+      );
+    });
+
+    return highlightedMessage;
+  };
+
+  /** MISCELLANEOUS FUNCTIONS - Functions for other components and animations*/
 
   // Sucessfully saved message animation
   useEffect(() => {
@@ -193,42 +446,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     }
   }, [isLoading]);
 
-  // Highlight words in each box red/yellow
-  const highlightWords = (message, red, yellow) => {
-    let highlightedMessage = message;
-
-    // Replace each detected word with new HTML
-    red.forEach((word) => {
-      const regex = new RegExp(`(${word})`, "gi");
-      highlightedMessage = highlightedMessage.replace(
-        regex,
-        `<span class="${styles.highlightRed}">$1</span>`
-      );
-    });
-
-    yellow.forEach((word) => {
-      const regex = new RegExp(`(${word})`, "gi");
-      highlightedMessage = highlightedMessage.replace(
-        regex,
-        `<span class="${styles.highlightYellow}">$1</span>`
-      );
-    });
-
-    return highlightedMessage;
-  };
-
-  // The optimizaton queries. Change as needed
-  const queries = [
-    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. Format it exaclty as such '関連キーワード:'",
-    "Using the same structure and process as described in the previous instructions, please provide a keyword optimization analysis for a Rakuten listing. Assume the listing is similar to the one previously discussed but with different results. Do not include any specific details such as item URL, title, or catch copy. Please follow these steps: 関連キーワード: List a comprehensive set of related keywords that could enhance search visibility for a product similar to the one discussed. Ignored Keywords Because Not in Content: List any keywords from the provided set that are not directly referenced or implied in the product content. Used from List Although Not Directly in Content: Document keywords from the initial list that, while not explicitly mentioned in the products content, are closely related to the product and included in the related keywords section. Inclusion of Synonyms/Similar Terms: Provide additional synonyms or closely related terms derived from the product content to broaden search visibility. Ensure that the response adheres to the same structure and format as the previous response and is clear, concise, and directly relevant. MAKE SURE THE RESPONSE IS DIFFERENT FROM THE PREVIOUS ONE. Format it exaclty as such '関連キーワード:'",
-    "From the previous 3 responses. Can you provide a score for each out of 10 based on how well they would perform on Rakuten based off maximizing search visibility. Format it exactly like this: Option 1: score, Option 2: score, Option 3: score",
-  ];
-
-  // Counter keeps track of which query is being executed
-  let counter = 0;
-  let unrelatedWords = [];
-  let inclusionWords = [];
-
+  // Mutex to make allChat mutually exclusive
   const mutex = {
     locked: false,
     lock() {
@@ -250,163 +468,12 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     },
   };
 
-  // Send query message to GPT
-
-  const sendMessage = async (message) => {
-    await mutex.execute(async () => {
-    // Append user message to chat history
-    setAllChat((prev) => [...prev]);
-  
-    const fetchWithTimeout = async (url, options, timeout = 5000) => {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timed out")), timeout)
-      );
-      return Promise.race([fetch(url, options), timeoutPromise]);
-    };
-  
-    const attemptFetch = async (retryCount = 0) => {
-      try {
-        const response = await fetchWithTimeout("/api/generate?endpoint=chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ message }),
-        });
-  
-        const data = await response.json();
-  
-        if (data.success) {
-          // Open a connection to receive streamed responses
-          const eventSource = new EventSource("/api/generate?endpoint=stream");
-          let accumulatedData = "";
-  
-          eventSource.onmessage = function (event) {
-            const parsedData = JSON.parse(event.data);
-  
-            if (parsedData.end_of_stream) {
-              accumulatedData = accumulatedData.replace(/- /g, "");
-              accumulatedData = accumulatedData.replace(/\*/g, "");
-              eventSource.close();
-              console.log("End of stream received");
-  
-              const paragraphs = accumulatedData.split("\n\n");
-              const firstParagraph = paragraphs[0];
-              let moreInfo = "";
-              if (counter < 5) {
-                moreInfo = paragraphs.slice(1).join("<br><br>");
-                moreInfo = moreInfo.split(": \n").join("<br>");
-                moreInfo = moreInfo.split("\n").join("<br>");
-                moreInfo = moreInfo.split(", ").join("<br>");
-                moreInfo = moreInfo.split(": ").join("<br>");
-              }
-              let result = firstParagraph.replace("関連キーワード: ", "");
-              let formattedPara = result.replace(/,/g, "").replace(/ /g, "\n");
-  
-              if (counter < 4) {
-                const startMarker = "Used from List Although Not Directly in Content";
-                const endMarker = "Inclusion of Synonyms/Similar Terms";
-  
-                const startIndex = accumulatedData.indexOf(startMarker) + startMarker.length;
-                const endIndex = accumulatedData.indexOf(endMarker);
-  
-                const extractedString = accumulatedData.substring(startIndex, endIndex).trim();
-                unrelatedWords = extractedString.split("\n").map((word) => word.trim()).filter((word) => word);
-  
-                const startIndex2 = accumulatedData.indexOf(endMarker) + endMarker.length;
-                const extractedString2 = accumulatedData.substring(startIndex2).trim();
-  
-                inclusionWords = extractedString2.split("\n").map((word) => word.trim()).filter((word) => word);
-              }
-  
-              let highlighted = highlightWords(formattedPara, unrelatedWords, inclusionWords);
-              moreInfo = highlighted + "<br><br>" + moreInfo;
-  
-              setAllChat((prevAllChat) => {
-                const newAllChat = [...prevAllChat];
-  
-                if (counter === 2) {
-                  setLoadingTextUpdate("Generating option 3");
-                  newAllChat.push({
-                    role: "options",
-                    content: highlighted,
-                    info: moreInfo,
-                    noHighlight: formattedPara,
-                  });
-                } else if (counter === 3) {
-                  setLoadingTextUpdate("Generating score.");
-                  counter += 1;
-  
-                  newAllChat.push({
-                    role: "options",
-                    content: highlighted,
-                    info: moreInfo,
-                    noHighlight: formattedPara,
-                  });
-                } else if (counter === 4) {
-                  newAllChat.push({
-                    role: "score",
-                    content: highlighted,
-                    info: moreInfo,
-                    noHighlight: formattedPara,
-                  });
-                  counter = 0;
-                  setIsLoading(false);
-                } else {
-                  setLoadingTextUpdate("Generating option 2");
-                  newAllChat.push({
-                    role: "options",
-                    content: highlighted,
-                    info: moreInfo,
-                    noHighlight: formattedPara,
-                  });
-                }
-                return newAllChat;
-              });
-  
-              if (counter < 3) {
-                counter += 1;
-                sendMessage(queries[counter - 1]);
-              }
-            } else {
-              accumulatedData += parsedData;
-            }
-          };
-  
-          eventSource.onopen = () => console.log("Connection to stream opened");
-  
-          eventSource.onerror = function (error) {
-            console.error("Stream error:", error);
-            eventSource.close();
-            console.log("Connection to stream closed");
-            if (retryCount < 3) {
-              console.log(`Retrying stream... (${retryCount + 1}/3)`);
-              attemptFetch(retryCount + 1); // Retry on failure
-            }
-          };
-        }
-      } catch (error) {
-        if (retryCount < 3) {
-          console.log(`Retrying... (${retryCount + 1}/3)`);
-          await attemptFetch(retryCount + 1);
-        } else {
-          console.error("Failed after 3 retries:", error);
-        }
-      }
-    };
-  
-    await attemptFetch();
-    });
-  };
-  
-
-  // Go to the saved keywords page
+  // Open the saved keywords page (opens new tab to not interfere with API processing)
   const showTable = async () => {
-    setPageState(allChat);
     window.open("/items", "_blank");
   };
 
-  // Find the option blocks for filtering
+  // Find the option blocks for filtering (when an option is saved, delete entire listing)
   const findBlockIndices = (index) => {
     const role = allChat[index].role;
     let start = index;
@@ -429,58 +496,61 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
   // Add selected keywords to the databse
   const addItem = async (content, index) => {
     await mutex.execute(async () => {
-    if (allChat[index].role === "score") {
-      toggleContent(index);
-      return;
-    }
-  
-    let { start, end } = findBlockIndices(index);
-  
-    if (isLoading && (end - start) !== 3) {
-      setShowMessage2(true);
-      return;
-    }
-  
-    try {
-      const response = await fetch("/api/addItem", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: content }),
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        setItems([...items, result.data]);
-  
-        // Use a functional update to ensure you get the latest version of allChat
-        setAllChat((prevAllChat) => {
-          let { start, end } = findBlockIndices(index);
-          // Filter based on the previous state of allChat
-          const newChat = prevAllChat.filter((_, idx) => idx < start || idx > end);
-          
-          return newChat; // Return the updated allChat state
+      if (allChat[index].role === "score") {
+        toggleContent(index);
+        return;
+      }
+
+      let { start, end } = findBlockIndices(index);
+
+      if (isLoading && end - start !== 3) {
+        setShowMessage2(true);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/addItem", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: content }),
         });
-  
-        // Update other state variables as needed
-        let ind = Math.floor(index / 4) + 1;
-        setListing((prevListing) => prevListing.filter((_, i) => i !== ind - 1));
-        setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind - 1));
-        const newExpanded = expanded.slice(4);
-        setExpanded(newExpanded);
-        setShowMessage(true);
-      } else {
+
+        const result = await response.json();
+        if (result.success) {
+          // Use a functional update to ensure you get the latest version of allChat
+          setAllChat((prevAllChat) => {
+            let { start, end } = findBlockIndices(index);
+            // Filter based on the previous state of allChat
+            const newChat = prevAllChat.filter(
+              (_, idx) => idx < start || idx > end
+            );
+
+            return newChat; // Return the updated allChat state
+          });
+
+          // Determine which chunk to remove from queues
+          let ind = Math.floor(index / 4) + 1;
+          setListing((prevListing) =>
+            prevListing.filter((_, i) => i !== ind - 1)
+          );
+          setUrl((prevUrl) => prevUrl.filter((_, i) => i !== ind - 1));
+
+          const newExpanded = expanded.slice(4);
+          setExpanded(newExpanded);
+          setShowMessage(true);
+        } else {
+          alert("Failed to add item.");
+        }
+      } catch (error) {
+        console.error("Error:", error);
         alert("Failed to add item.");
       }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Failed to add item.");
-    }
-  });
+    });
   };
-  
 
+  // Toggle to show details of specific listing
   const toggleContent = (index) => {
     const newExpanded = [...expanded];
     newExpanded[index - 3] = !newExpanded[index - 3];
@@ -489,6 +559,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
     setExpanded(newExpanded);
   };
 
+  // HTML content to be displayed
   return (
     <div className={styles.body}>
       <Head>
@@ -514,14 +585,14 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           </a>
         </div>
         {isButtonVisible && (
-        <button
+          <button
             className={styles.startButton}
             type="button"
             onClick={loadFirstChunk}
           >
             Start Generation
           </button>
-          )}
+        )}
       </div>
       <div className={styles.pageContainer}>
         <div className={styles.leftTextBox}>
@@ -534,14 +605,18 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
           </div>
         </div>
         <div className={styles.chatContainer}>
-          {allChat.slice(0,12).map((msg, index) => (
+          {allChat.slice(0, 12).map((msg, index) => (
             <div
               key={index}
               className={
                 msg.role === "score" ? styles.chatBox2 : styles.chatBox
               }
             >
-              <div className={`${msg.role === "score" ? styles.scoreBox : ""} ${styles.contentArea}`}>
+              <div
+                className={`${msg.role === "score" ? styles.scoreBox : ""} ${
+                  styles.contentArea
+                }`}
+              >
                 <div
                   className={styles.leftText}
                   dangerouslySetInnerHTML={{
@@ -567,7 +642,9 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
               )}
             </div>
           ))}
-          {isLoading && allChat.length < 12 && <p className={styles.loadingText}>{loadingText}</p>}
+          {isLoading && allChat.length < 12 && (
+            <p className={styles.loadingText}>{loadingText}</p>
+          )}
           {isLoading && allChat.length < 12 && (
             <p className={styles.loadingTextsmall}>{loadingTextUpdate}</p>
           )}
