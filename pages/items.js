@@ -64,7 +64,6 @@ const ItemsPage = () => {
       <main className={styles.main}>
         <div className="header">
           <h1 className={styles.title}>Saved Keywords</h1>
-          <button onClick={() => router.push('/')} className={styles.dataButton}>Go back</button>
         </div>
         <div className={styles.tableContainer}>
           <table className={styles.table}>

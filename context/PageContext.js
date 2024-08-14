@@ -5,7 +5,7 @@ const PageContext = createContext();
 export const PageProvider = ({ children }) => {
   const [pageState, setPageState] = useState([]);
   const [isProcessed, setIsProcessed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [listing, setListing] = useState([]);
 
   return (

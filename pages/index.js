@@ -33,6 +33,7 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [url, setUrl] = useState([]);
   const [expanded, setExpanded] = useState(allChat.map(() => false));
+  const [isButtonVisible, setIsButtonVisible] = useState(true);
 
   // Read from file in chunks
   useEffect(() => {
@@ -61,11 +62,13 @@ export default function Home() {
   }, [isProcessed, allRows]);
 
   // Load first chunk at launch
-  useEffect(() => {
+  const loadFirstChunk = ()=> {
     if (allRows.length > 0 && currentRows.length === 0) {
+      setIsButtonVisible(false);
+      setIsLoading(true);
       loadNextChunk(allRows, 0); // Load the first chunk initially
     }
-  }, [allRows]);
+  };
 
   // Parses data rows and converts them to initial query
   useEffect(() => {
@@ -141,7 +144,7 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
 
   // Detect when to load the next chunk 
   useEffect(() => {
-    if (allChat.length < 13 && isProcessed) {
+    if (allChat.length < 13 && isProcessed && !isButtonVisible) {
       setIsLoading(true);
       setIsProcessed(false);
       loadNextChunk(allRows, currentIndex);
@@ -510,6 +513,15 @@ Provide the answer in this exact format "関連キーワード: {新しい関連
             See Listing
           </a>
         </div>
+        {isButtonVisible && (
+        <button
+            className={styles.startButton}
+            type="button"
+            onClick={loadFirstChunk}
+          >
+            Start Generation
+          </button>
+          )}
       </div>
       <div className={styles.pageContainer}>
         <div className={styles.leftTextBox}>
