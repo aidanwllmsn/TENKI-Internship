@@ -100,6 +100,26 @@
   padding: 10px;
 }
 
+.startButton { 
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #0c785d;
+  color: white;
+  position: absolute;
+  right: 20px;
+  display: flex;
+  gap: 25px;
+  border: none;
+  border-radius: 5px;  
+  text-decoration: none;
+  font-family: "ColfaxAI", Helvetica, sans-serif;
+  padding: 10px;
+}
+
+.startButton:hover {
+  background-color: #09624c; 
+}
+
 .dataButton:hover {
   background-color: #afafb1;
 }
@@ -231,40 +251,6 @@
   top: -50px; /* Slide back up off the screen */
 }
 
-.userMessage,
-.assistantMessage {
-  padding: 12px 16px;
-  border: 1px solid #10a37f;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  max-width: 80%;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-.userMessage {
-  align-self: flex-end;
-  background-color: #daf8e3;
-}
-
-.assistantMessage {
-  align-self: flex-start;
-  background-color: #f1f1f1;
-}
-
-.messageInputContainer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  background: #fff;
-  display: flex;
-  justify-content: center;
-  height: auto;
-  padding-bottom: 20px;
-}
-
 .heading1 {
   text-align: center; /* Centers text horizontally */
   width: 100%; /* Ensures the heading takes full width of its container */
@@ -305,77 +291,6 @@
  background-color: #f2f2f2;
 }
 
-
-.form {
-  max-width: 600px;
-  width: 100%;
-  margin: 0 auto;
-  flex-direction: column;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.textarea {
-  padding: 12px 16px;
-  border: 1px solid #10a37f;
-  border-radius: 4px;
-  margin-bottom: 24px;
-  width: 100%;
-  min-height: 50px;
-  resize: both;
-  overflow: auto;
-  margin-right: 4px;
-  flex: 3;
-}
-
-.inputSubmit,
-.inputButton,
-.inputGen {
-  padding: 12px 16px;
-  color: #fff;
-  background-color: #10a37f;
-  border: none;
-  border-radius: 4px;
-  text-align: center;
-  cursor: pointer;
-  flex: 1;
-  margin: 0 2px;
-}
-
-.inputSubmit:hover {
-  background-color: #0c785d;
-}
-
-.inputSubmit {
-  flex-grow: 4;
-}
-
-.inputButton {
-  flex-grow: 1;
-  background-color: #f44336;
-}
-
-.inputButton:hover {
-  background-color: #af2f26;
-}
-
-.inputGen {
-  flex-grow: 1;
-  background-color: #1f8de1;
-}
-
-.inputGen:hover {
-  background-color: #0b65aa;
-}
-
-.inputText {
-  padding: 12px 16px;
-  border: 1px solid #10a37f;
-  border-radius: 4px;
-  margin-bottom: 24px;
-}
-
 .loadingText {
   font-size: 32px;
   text-align: center;
@@ -395,14 +310,4 @@
   margin-left: auto;
   margin-right: auto;
   width: 100%;
-}
-
-.placeholder {
-  color: #8e8ea0;
-  opacity: 1;
-}
-
-.result {
-  font-weight: bold;
-  margin-top: 40px;
 }
