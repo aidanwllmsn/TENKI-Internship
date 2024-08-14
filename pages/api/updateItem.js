@@ -1,6 +1,8 @@
 import { MongoClient, ObjectId } from 'mongodb';
 import clientPromise from '../../lib/mongodb';
 
+/** Connect and update item from database */
+
 export default async function handler(req, res) {
   if (req.method === 'PUT') {
     const { id, name } = req.body;

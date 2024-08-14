@@ -1,6 +1,8 @@
 import { MongoClient, ObjectId } from 'mongodb';
 import clientPromise from '../../lib/mongodb';
 
+/** Connect and remove item from database */
+
 const handler = async (req, res) => {
   if (req.method === 'DELETE') {
     try {

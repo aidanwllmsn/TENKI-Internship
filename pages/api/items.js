@@ -1,5 +1,6 @@
-// pages/api/items.js
 import clientPromise from '../../lib/mongodb';
+
+/** Connect and fetch items from databse */
 
 export default async (req, res) => {
   try {

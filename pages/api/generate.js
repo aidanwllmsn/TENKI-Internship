@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 
+/** This file handles the connection and response handling of the ChatGPT API, no need to edit */
+
 const openai = new OpenAI();
 
 let chatHistory = [];
@@ -35,8 +37,9 @@ export default async function handler(req, res) {
         res.setHeader("Connection", "keep-alive");
 
         try {
-          let accumulatedData = '';
+          let accumulatedData = "";
 
+          // Specifications of API model and settings, change as needed
           const stream = await openai.beta.chat.completions.stream({
             model: "gpt-4o-mini",
             messages: chatHistory,
@@ -54,10 +57,8 @@ export default async function handler(req, res) {
             res.write(`data: ${JSON.stringify(message)}\n\n`);
           }
 
-          // After the stream ends, get the final chat completion
-          const chatCompletion = await stream.finalChatCompletion();
           chatHistory.push({ role: "assistant", content: accumulatedData });
-          res.write("data: {\"end_of_stream\": true}\n\n");
+          res.write('data: {"end_of_stream": true}\n\n');
         } catch (error) {
           res.write(
             "event: error\ndata: " +

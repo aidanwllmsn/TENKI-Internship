@@ -1,5 +1,7 @@
 import React from 'react';
 
+/** Component to display HTML listing */
+
 const RawHtmlComponent = ({ htmlContent, width, height }) => {
   return (
     <div 
